@@ -1,0 +1,1 @@
+{"name":"music-video-karaoke","version":"3.0.0","private":true,"scripts":{"test":"node --test tests/parsers.test.cjs","test:e2e":"playwright test","serve":"python3 -m http.server 4173"},"devDependencies":{"@playwright/test":"1.62.1"}}
