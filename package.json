@@ -1,6 +1,6 @@
 {
   "name": "music-video-karaoke",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "private": true,
   "scripts": {
     "test": "node --test tests/parsers.test.cjs",
@@ -11,3 +11,4 @@
     "@playwright/test": "1.62.1"
   }
 }
+

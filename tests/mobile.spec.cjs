@@ -42,3 +42,26 @@ test('layout stays inside every aspect and keeps logo transparency',async({page}
  const transparent=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=logoAsset.width;c.height=logoAsset.height;const x=c.getContext('2d');x.drawImage(logoAsset,0,0);return x.getImageData(0,0,1,1).data[3]});expect(transparent).toBe(0);
  await page.locator('[data-tab=media]').click();for(const aspect of ['16:9','9:16','1:1']){await page.locator('#aspect').selectOption(aspect);const valid=await page.evaluate(()=>Object.keys(layoutState).every(key=>{layoutState[key].x=1;layoutState[key].y=0;constrainLayer(key);const r=layerRect(key);return r.x>=-.01&&r.y>=-.01&&r.x+r.w<=cv.width+.01&&r.y+r.h<=cv.height+.01}));expect(valid).toBe(true)}
 });
+
+
+test('hidden export keeps its native recorder and continues the same song clock',async({page},testInfo)=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{window.simulatedHidden=false;Object.defineProperty(document,'hidden',{configurable:true,get:()=>window.simulatedHidden})});
+ await page.goto('/');await page.locator('#audioFile').setInputFiles(path.join(__dirname,'fixtures/tone.wav'));await page.waitForFunction(()=>!!env&&!loading);await page.locator('#imageFiles').setInputFiles(path.join(__dirname,'fixtures/cover.png'));await page.waitForFunction(()=>imgs.length>0);
+ test.skip(!await page.evaluate(()=>canRecord()),'Recording unavailable in this engine');
+ await page.locator('#record').click();await page.waitForFunction(()=>currentTime()>.3);
+ await page.evaluate(()=>{window.exportSession=run;window.simulatedHidden=true;document.dispatchEvent(new Event('visibilitychange'))});
+ await page.waitForFunction(()=>run?.paused&&run.rec.state==='paused');const paused=await page.evaluate(()=>currentTime());await page.waitForTimeout(450);expect(await page.evaluate(()=>currentTime())).toBeCloseTo(paused,2);
+ await expect(page.locator('#record')).toHaveText('Tiếp tục xuất');expect(await page.evaluate(()=>run===window.exportSession)).toBe(true);await expect(page.locator('#out video')).toHaveCount(0);
+ await page.evaluate(()=>{window.simulatedHidden=false;document.dispatchEvent(new Event('visibilitychange'))});await page.waitForFunction(()=>run&&!run.paused&&!run.resuming);expect(await page.evaluate(()=>run===window.exportSession)).toBe(true);
+ // A manual pause remains paused after another hide/show; only the user resumes it.
+ await page.locator('#record').click();await page.waitForFunction(()=>run?.paused&&run.rec.state==='paused');await page.evaluate(()=>{window.simulatedHidden=true;document.dispatchEvent(new Event('visibilitychange'));window.simulatedHidden=false;document.dispatchEvent(new Event('visibilitychange'))});await page.waitForTimeout(200);expect(await page.evaluate(()=>run.paused&&!run.autoPaused)).toBe(true);await page.locator('#record').click();
+ await page.waitForFunction(()=>!!document.querySelector('#out video'),{timeout:15000});const downloadPromise=page.waitForEvent('download');await page.locator('#out a').click();const download=await downloadPromise;await download.saveAs(testInfo.outputPath('resumed-'+download.suggestedFilename()));expect(await page.evaluate(()=>run===null)).toBe(true);expect(errors).toEqual([]);
+});
+
+test('audio suspension holds export and failed autoplay offers a manual resume',async({page})=>{
+ await page.goto('/');await page.locator('#audioFile').setInputFiles(path.join(__dirname,'fixtures/tone.wav'));await page.waitForFunction(()=>!!env&&!loading);await page.locator('#imageFiles').setInputFiles(path.join(__dirname,'fixtures/cover.png'));await page.waitForFunction(()=>imgs.length>0);test.skip(!await page.evaluate(()=>canRecord()),'Recording unavailable');
+ await page.locator('#record').click();await page.waitForFunction(()=>currentTime()>.2);await page.evaluate(()=>AC.suspend());await page.waitForFunction(()=>run?.paused&&run.rec.state==='paused');
+ await page.evaluate(()=>{window.realResume=AC.resume.bind(AC);AC.resume=()=>Promise.reject(new Error('autoplay blocked'));resumeExport(false)});await page.waitForFunction(()=>run?.paused&&!run.resuming);await expect(page.locator('#msg')).toContainText('Tiếp tục xuất');await expect(page.locator('#out video')).toHaveCount(0);
+ await page.evaluate(()=>{AC.resume=window.realResume});await page.locator('#record').click();await page.waitForFunction(()=>run&&!run.paused);await page.locator('#stop').click();await page.waitForFunction(()=>run===null);
+});

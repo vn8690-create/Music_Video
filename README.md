@@ -25,7 +25,7 @@ Có 15 lớp độc lập: zoom bass, rung, glow, RGB, zoom trôi, xoay, VHS, gl
 - iPhone: Safari bản mới. Chọn file trong **Tệp / Photos**. Sau khi xuất, **Chia sẻ / Lưu vào Tệp** hoặc bấm link tải. Có thể thêm trang vào màn hình chính bằng menu Chia sẻ.
 - Android: Chrome bản mới. Có thể dùng menu trình duyệt để thêm/cài app lên màn hình chính.
 - App tự kiểm tra `MediaRecorder`, ghi canvas và codec. Ưu tiên MP4 nếu có; nếu không thì WebM. Đây không phải bộ chuyển đổi mọi định dạng sang MP4.
-- Giữ tab hiện, không khóa màn hình, đổi app hay nhận cuộc gọi lúc xuất. App thử giữ màn hình sáng nếu trình duyệt cho phép; không bảo đảm hệ điều hành luôn giữ ứng dụng chạy.
+- Chuyển tab, khóa màn hình hoặc gián đoạn âm thanh sẽ tạm giữ phiên xuất; quay lại để tiếp tục từ mốc đã ghi. Đây không phải xuất video chạy nền. App thử giữ màn hình sáng nếu trình duyệt cho phép; không bảo đảm hệ điều hành luôn giữ ứng dụng chạy.
 - Xuất theo thời gian thực, không phải renderer offline cố định từng frame. Thời gian xuất bằng độ dài nhạc; bài dài hoặc nhiều ảnh lớn có thể vượt bộ nhớ điện thoại.
 - Khi thiếu tính năng ghi video, app vẫn cho xem trước và giải thích cách dùng trình duyệt mới/máy tính để xuất. Không xin quyền camera/microphone.
 - Service worker lưu giao diện dùng lại offline sau lần mở HTTPS thành công; không tự lưu các file nhạc/ảnh/sub đã chọn. Tải video/LRC trước khi đóng tab.
@@ -61,3 +61,14 @@ Nguồn tham khảo API: [WebKit MediaRecorder](https://webkit.org/blog/11353/me
 - Logo/ảnh nhãn được giữ trong RAM của tab, không gửi lên server. Bản này chưa lưu toàn bộ dự án khi đóng tab; cần tải video trước khi thoát.
 
 Không phải DAW/NLE đầy đủ: xuất video vẫn theo thời gian thực bằng trình duyệt. Kiểm tra bằng engine Chromium/WebKit và màn hình giả lập không thay thế thử trên iPhone/Android thật.
+
+
+## V4.1 — giữ lượt xuất khi chuyển tab
+
+Bản cũ hủy lượt xuất khi tab bị ẩn. Bản này tạm dừng MediaRecorder và nguồn nhạc ở cùng mốc; khi quay lại app thử tiếp tục. Nếu trình duyệt cần thao tác để mở lại âm thanh, bấm **Tiếp tục xuất**. Có thể chủ động **Tạm dừng xuất**; trường hợp này app không tự tiếp tục khi đổi tab rồi quay lại.
+
+Tiến độ chỉ giữ trong RAM của phiên tab đang mở. Không đóng/tải lại trang. Nếu hệ điều hành buộc đóng trình duyệt hoặc giải phóng tab thì không thể khôi phục; khóa màn hình lâu trên iPhone/Android có thể gây ra điều này. App không xuất tiếp khi trang bị ẩn, không dùng mẹo bật âm thanh để vượt cơ chế tiết kiệm pin.
+
+Khi recorder tự kết thúc hoặc không còn khả năng tiếp tục, app cố cho tải phần đã ghi với tên **video-karaoke-chua-du**, ghi rõ chưa đủ bài. File đã ghi một phần không đồng nghĩa đã xuất toàn bộ. Nút **Hủy xuất** vẫn hủy theo yêu cầu người dùng.
+
+Kiểm thử che/hiện trang được mô phỏng bằng sự kiện visibility và việc giữ đồng hồ được kiểm tra với recorder thật. Không phải thử khóa màn hình trên điện thoại thật.
