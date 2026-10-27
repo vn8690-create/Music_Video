@@ -1,4 +1,4 @@
-# Music Video + Karaoke
+# Music Studio · Video + Karaoke
 
 Ứng dụng web local: nhạc + ảnh + nhiều lớp hiệu ứng + sub karaoke → video. Không cần Python/Node để dùng. Không tải file cá nhân lên máy chủ; mọi xử lý media ở trình duyệt.
 
@@ -48,3 +48,16 @@ npm run test:e2e
 WebKit/Chromium được chạy ở kích thước và chế độ chạm của iPhone/Android. Đây là kiểm thử engine và giả lập màn hình, không thay thế kiểm thử Safari/Chrome trên điện thoại thật. Không hứa hỗ trợ mọi iOS/Android cũ.
 
 Nguồn tham khảo API: [WebKit MediaRecorder](https://webkit.org/blog/11353/mediarecorder-api/), [Safari 18.4 codecs](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/), [Wake Lock](https://developer.mozilla.org/en-US/docs/Web/API/WakeLock/request).
+
+
+## Studio V4 — bố cục, logo và đĩa nhạc
+
+- Giao diện chia thành **Tư liệu / Hiệu ứng / Bố cục / Karaoke**. Khung video và danh sách lớp luôn ở khu vực chính.
+- Cột phổ, sóng và vòng nhạc có vị trí, kích thước, độ rõ độc lập. Vào **Bố cục**, chọn lớp, bật hiện lớp, rồi chỉnh X/Y hoặc các nút đặt nhanh. Chọn lớp từ danh sách dưới khung cũng được.
+- Bật **Kéo trên video** để kéo lớp bằng chuột hoặc ngón tay. Trên điện thoại tính năng này tắt mặc định để vẫn cuộn trang dễ dàng; luôn có thanh X/Y thay thế. Khi canvas được chọn có thể dùng phím mũi tên, Shift để dịch nhanh.
+- **Thêm logo** nhận ảnh PNG/WebP/JPG. PNG nền trong giữ nguyên alpha và tỉ lệ ảnh. Chỉnh vị trí, cỡ và độ rõ; gỡ logo nếu không muốn dùng.
+- **Thêm đĩa xoay** tạo đĩa vinyl có vân rãnh và nhãn ảnh. Mặc định lấy ảnh nền đang chiếu; có thể chọn ảnh nhãn riêng. Tốc độ 0–45 vòng/phút; 0 dừng xoay. Đĩa đi theo thời gian bài nhạc nên dừng khi tạm dừng và khớp lại khi tua.
+- **Hoàn tác/Làm lại** áp dụng cho thay đổi bố cục, không phải lịch sử toàn bộ dự án. Khung chọn là lớp DOM để chỉnh, không được ghi vào video. Các vị trí được lưu theo phần trăm khung hình trong phiên làm việc; đổi tỉ lệ video sẽ giữ các lớp bên trong khung.
+- Logo/ảnh nhãn được giữ trong RAM của tab, không gửi lên server. Bản này chưa lưu toàn bộ dự án khi đóng tab; cần tải video trước khi thoát.
+
+Không phải DAW/NLE đầy đủ: xuất video vẫn theo thời gian thực bằng trình duyệt. Kiểm tra bằng engine Chromium/WebKit và màn hình giả lập không thay thế thử trên iPhone/Android thật.
