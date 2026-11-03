@@ -72,3 +72,15 @@ Tiến độ chỉ giữ trong RAM của phiên tab đang mở. Không đóng/t�
 Khi recorder tự kết thúc hoặc không còn khả năng tiếp tục, app cố cho tải phần đã ghi với tên **video-karaoke-chua-du**, ghi rõ chưa đủ bài. File đã ghi một phần không đồng nghĩa đã xuất toàn bộ. Nút **Hủy xuất** vẫn hủy theo yêu cầu người dùng.
 
 Kiểm thử che/hiện trang được mô phỏng bằng sự kiện visibility và việc giữ đồng hồ được kiểm tra với recorder thật. Không phải thử khóa màn hình trên điện thoại thật.
+
+
+
+## V5 — Mẫu Album đĩa than
+
+Ở **Tư liệu**, bấm **Dùng mẫu Album đĩa than**, hoặc vào **Bố cục → Mẫu video**. Thêm ảnh chân dung, tên bài, nghệ sĩ, tên kênh và dòng mô tả. Có ba tông Trắng ngọc / Đen than / Hồng phấn. Ảnh hòa vào nền, đĩa xoay và thanh thời gian theo nhạc.
+
+Đĩa, cột phổ, sóng, vòng và logo tiếp tục dùng hệ thống lớp cũ: chỉnh vị trí/cỡ/độ rõ, ảnh nhãn, tốc độ và kéo trên canvas. Đổi khung ngang/dọc/vuông sẽ sắp lại mẫu; **Sắp lại vị trí theo khung hình** trả về vị trí gợi ý. Sub ASS/LRC/SRT có thời gian được ghi vào video, phần album dành vùng dưới cho lời. Tắt Hiện sub để dùng toàn khung.
+
+Bản GitHub Pages dựng trong trình duyệt, không chạy Python/Whisper local. Dùng file sub đã căn từ Karaoke Studio/bản PC; lời TXT có thể căn từng câu bằng tay ở Karaoke. Chức năng giữ lượt xuất khi chuyển tab của V4.1 vẫn được giữ.
+
+Nếu thấy V4.1, tải lại trang để nhận giao diện V5; service worker có bộ nhớ giao diện mới. Các file cá nhân không được đưa lên repo.

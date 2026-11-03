@@ -1,4 +1,24 @@
 const {test,expect}=require('@playwright/test');const path=require('node:path');
+test('album template keeps studio layers and reserves space for karaoke',async({page},testInfo)=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
+ await page.locator('#audioFile').setInputFiles(path.join(__dirname,'fixtures/tone.wav'));await page.waitForFunction(()=>!!env&&!loading);
+ await page.locator('#imageFiles').setInputFiles(path.join(__dirname,'fixtures/cover.png'));await page.waitForFunction(()=>imgs.length>0);
+ await page.locator('#title').fill('Giận thì giận, thương thì thương');await page.locator('#albumQuick').click();
+ await expect(page.locator('#layoutMode')).toHaveValue('album');await expect(page.locator('#albumOptions')).toBeVisible();
+ await page.locator('#albumArtist').fill('NAM MUSIC');expect(await page.evaluate(()=>enabledLayer('disc')&&enabledLayer('wave'))).toBe(true);
+ const original=await page.evaluate(()=>({...layoutState.disc}));
+ await page.locator('[data-tab=karaoke]').click();await page.locator('#lyrics').fill('[00:00.10]<00:00.10>Xin <00:00.60>chào<00:01.40>\n[00:01.40]Một bản tình ca');await page.locator('#applyLyrics').click();
+ expect(await page.evaluate(()=>albumGeometry().A<cv.height)).toBe(true);expect(await page.evaluate(()=>layoutState.disc.y)).toBeLessThan(original.y);
+ await page.locator('[data-tab=layout]').click();
+ for(const theme of ['pearl','ink','rose']){await page.locator('#albumTheme').selectOption(theme);await page.evaluate(()=>drawFrame(.8));expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true)}
+ await page.locator('[data-tab=media]').click();for(const aspect of ['9:16','1:1','16:9']){await page.locator('#aspect').selectOption(aspect);expect(await page.evaluate(()=>{const r=layerRect('disc');return r.x>=0&&r.y>=0&&r.x+r.w<=cv.width+.01&&r.y+r.h<=cv.height+.01})).toBe(true)}
+ await page.locator('[data-tab=layout]').click();await page.locator('#layerSelect').selectOption('disc');await page.locator('#layerX').fill('35');expect(await page.evaluate(()=>layoutState.disc.x)).toBeCloseTo(.35);
+ await page.locator('#albumReset').click();expect(await page.evaluate(()=>layoutState.disc.x)).toBeCloseTo(.245);
+ await page.evaluate(()=>drawFrame(.8));await page.screenshot({path:testInfo.outputPath('album-studio.png'),fullPage:true});
+ if(await page.evaluate(()=>canRecord())){await page.locator('#record').click();await page.waitForFunction(()=>!!document.querySelector('#out video'),{timeout:20000});await expect(page.locator('#out a')).toBeVisible()}
+ await page.locator('#layoutMode').selectOption('classic');await expect(page.locator('#albumOptions')).toBeHidden();expect(await page.evaluate(()=>enabledLayer('disc'))).toBe(false);
+ expect(errors).toEqual([]);
+});
 test('mix layers, preview, karaoke and record on mobile engines',async({page},testInfo)=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');await expect(page.locator('#quality')).toHaveValue('480');
  await page.locator('#audioFile').setInputFiles(path.join(__dirname,'fixtures/tone.wav'));await page.waitForFunction(()=>!!env&&!loading);
@@ -65,3 +85,4 @@ test('audio suspension holds export and failed autoplay offers a manual resume',
  await page.evaluate(()=>{window.realResume=AC.resume.bind(AC);AC.resume=()=>Promise.reject(new Error('autoplay blocked'));resumeExport(false)});await page.waitForFunction(()=>run?.paused&&!run.resuming);await expect(page.locator('#msg')).toContainText('Tiếp tục xuất');await expect(page.locator('#out video')).toHaveCount(0);
  await page.evaluate(()=>{AC.resume=window.realResume});await page.locator('#record').click();await page.waitForFunction(()=>run&&!run.paused);await page.locator('#stop').click();await page.waitForFunction(()=>run===null);
 });
+
