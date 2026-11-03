@@ -8,7 +8,7 @@ Sau khi bật GitHub Pages, địa chỉ dự kiến: **https://vn8690-create.gi
 
 Nếu chưa bật: vào **Settings → Pages → Build and deployment → Deploy from a branch → main → /(root) → Save**. Chờ GitHub triển khai. Repo có sẵn index.html và .nojekyll.
 
-Có thể tải `index.html` về máy tính và mở trực tiếp; để dùng trên iPhone nên mở trang HTTPS bằng Safari, Android bằng Chrome. Trình duyệt trong Facebook/Zalo có thể hạn chế chọn file, âm thanh hoặc tải xuống.
+Có thể tải cả repo về máy tính (giữ index.html, album.js, playlist.js và studio.css cùng thư mục) rồi mở index.html; để dùng trên iPhone nên mở trang HTTPS bằng Safari, Android bằng Chrome. Trình duyệt trong Facebook/Zalo có thể hạn chế chọn file, âm thanh hoặc tải xuống.
 
 ## Phối nhiều hiệu ứng
 
@@ -84,3 +84,16 @@ Kiểm thử che/hiện trang được mô phỏng bằng sự kiện visibility
 Bản GitHub Pages dựng trong trình duyệt, không chạy Python/Whisper local. Dùng file sub đã căn từ Karaoke Studio/bản PC; lời TXT có thể căn từng câu bằng tay ở Karaoke. Chức năng giữ lượt xuất khi chuyển tab của V4.1 vẫn được giữ.
 
 Nếu thấy V4.1, tải lại trang để nhận giao diện V5; service worker có bộ nhớ giao diện mới. Các file cá nhân không được đưa lên repo.
+
+
+## V5.1 — Danh sách nhiều bài hát
+
+Ở **Tư liệu → Thêm nhiều bài**, chọn nhiều MP3/WAV/M4A/FLAC một lượt. Chọn thêm lần nữa để nối vào cuối danh sách. Dùng ↑ / ↓ đổi thứ tự, × xóa bài, ▶ nghe từ bài đó sau khi đã chọn ảnh. **Tạo video** xuất toàn bộ danh sách liên tiếp vào một video. Ảnh và hiệu ứng tiếp tục chạy trên timeline chung của album.
+
+Bật **Hiện tên bài đang phát** để lấy tên từ tên file cho từng bài. Thanh tua và đồng hồ ngoài khung là thời gian toàn album; thanh thời gian trong mẫu Album là thời gian của bài hiện tại.
+
+Mỗi bài có nút **Thêm sub / Đổi sub**: nhập ASS/LRC/SRT/VTT đã có timing tính từ đầu bài đó. App tự cộng mốc đầu bài và dời sub khi đổi thứ tự. Có thể tải LRC tổng từ thẻ Karaoke. Ô lời trong thẻ Karaoke vẫn áp dụng cho **toàn album**: bấm Áp dụng sẽ thay các sub đã gắn từng bài. Nếu đổi danh sách sau khi nhập sub toàn album, cần nhập lại sub tổng; sub gắn từng bài được giữ. TXT không có mốc vẫn cần căn lời trước.
+
+Âm thanh được giải mã từng bài, giữ một bản PCM cho mỗi bài và lập lịch cùng đồng hồ Web Audio; không ghép thêm một bản PCM khổng lồ. MP3 được phát theo nội dung đã giải mã, không tự xóa khoảng im lặng có sẵn trong file. Trình duyệt vẫn cần RAM cho toàn bộ danh sách: giới hạn PCM hiện tại là 256 MiB trên thiết bị con trỏ chạm và 768 MiB trên máy tính. Khi đạt giới hạn, app giữ những bài đã thêm và báo chia album. Không cam kết số bài cố định vì độ dài/số kênh/tần số lấy mẫu khác nhau. Đóng tab sẽ mất danh sách vì app không lưu file nhạc cá nhân.
+
+Xuất vẫn theo thời gian thực. Giữ tab mở; việc tạm giữ và tiếp tục lượt xuất của V4.1 hoạt động cho cả danh sách.

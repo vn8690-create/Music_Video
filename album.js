@@ -41,7 +41,7 @@ function drawAlbumOverlay(time,frame,amp){
  const label=($('#albumLabel').value.trim()||'YOUR MUSIC').toUpperCase();
  cx.fillStyle=C.muted;cx.font='600 '+Math.round(S*.017)+'px "Segoe UI",sans-serif';
  cx.fillText(label,left,G.A*(G.portrait?.56:.066),G.W*(G.portrait?.47:.40));
- const title=$('#title').value.trim()||'Tên bài hát',tw=G.W*(G.portrait?.46:.42);
+ const title=displayTitle(time)||'Tên bài hát',tw=G.W*(G.portrait?.46:.42);
  let size=S*(G.portrait?.050:.055),font='500 '+size+'px Georgia,"Yu Mincho",serif';
  let lines=albumLines(title,tw,font,3);while(lines.length>=3&&size>S*.028&&cx.measureText(title).width>tw*2.7){size*=.93;font='500 '+size+'px Georgia,"Yu Mincho",serif';lines=albumLines(title,tw,font,3)}
  cx.font=font;cx.fillStyle=C.ink;const ty=G.A*(G.portrait?.605:.12);
@@ -51,10 +51,10 @@ function drawAlbumOverlay(time,frame,amp){
  cx.fillText($('#albumArtist').value.trim()||'Tên nghệ sĩ',left,y,tw);
  y+=S*.041;cx.font='400 '+Math.round(S*.0165)+'px "Segoe UI",sans-serif';cx.fillText($('#albumSubtitle').value.trim()||'OFFICIAL AUDIO',left,y,tw);
  if($('#albumProgress').checked){
-  const x=G.portrait?left:left,w=G.W*(G.portrait?.87:.36),y=G.A*(G.portrait?.941:.929),progress=buf?clamp(time/buf.duration):0;
+  const x=G.portrait?left:left,w=G.W*(G.portrait?.87:.36),y=G.A*(G.portrait?.941:.929),tc=trackClock(time),progress=tc.duration?clamp(tc.time/tc.duration):0;
   cx.strokeStyle=C.muted+'55';cx.lineWidth=Math.max(1,S*.0018);cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+w,y);cx.stroke();
   cx.strokeStyle=$('#accent').value;cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+w*progress,y);cx.stroke();cx.fillStyle=$('#accent').value;cx.beginPath();cx.arc(x+w*progress,y,S*.0045,0,Math.PI*2);cx.fill();
-  cx.font='500 '+Math.round(S*.016)+'px "Segoe UI",sans-serif';cx.fillStyle=C.muted;cx.fillText(clock(time),x,y+S*.016);cx.textAlign='right';cx.fillText(clock(buf?.duration),x+w,y+S*.016);
+  cx.font='500 '+Math.round(S*.016)+'px "Segoe UI",sans-serif';cx.fillStyle=C.muted;cx.fillText(clock(tc.time),x,y+S*.016);cx.textAlign='right';cx.fillText(clock(tc.duration),x+w,y+S*.016);
  }
  cx.restore();
 }

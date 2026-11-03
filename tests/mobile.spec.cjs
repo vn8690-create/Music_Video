@@ -1,4 +1,21 @@
 const {test,expect}=require('@playwright/test');const path=require('node:path');
+function toneFile(name,seconds,hz,rate=22050){const samples=Math.round(seconds*rate),data=Buffer.alloc(44+samples*2);data.write('RIFF',0);data.writeUInt32LE(data.length-8,4);data.write('WAVEfmt ',8);data.writeUInt32LE(16,16);data.writeUInt16LE(1,20);data.writeUInt16LE(1,22);data.writeUInt32LE(rate,24);data.writeUInt32LE(rate*2,28);data.writeUInt16LE(2,32);data.writeUInt16LE(16,34);data.write('data',36);data.writeUInt32LE(samples*2,40);for(let i=0;i<samples;i++)data.writeInt16LE(Math.round(Math.sin(i/rate*hz*Math.PI*2)*10000),44+i*2);return{name,mimeType:'audio/wav',buffer:data}}
+test('playlist appends songs, reorders local subtitles and records consecutive audio',async({page},testInfo)=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
+ await page.locator('#audioFile').setInputFiles([toneFile('Bài A.wav',1.3,440),toneFile('Bài B.wav',1.1,880,44100)]);
+ await page.waitForFunction(()=>playlist.length===2&&!loading);expect(await page.evaluate(()=>buf.duration)).toBeCloseTo(2.4,2);
+ await page.locator('#imageFiles').setInputFiles(path.join(__dirname,'fixtures/cover.png'));await page.waitForFunction(()=>imgs.length>0);
+ await page.locator('#playlist input[type=file]').nth(1).setInputFiles({name:'bai-b.lrc',mimeType:'text/plain',buffer:Buffer.from('[00:00.10]<00:00.10>Bài <00:00.50>B<00:00.90>')});
+ await page.waitForFunction(()=>cues.length===1);expect(await page.evaluate(()=>cues[0].start)).toBeCloseTo(1.4,2);
+ await page.getByRole('button',{name:'Đưa bài 2 lên',exact:true}).click();expect(await page.evaluate(()=>playlist[0].title)).toBe('Bài B');expect(await page.evaluate(()=>cues[0].start)).toBeCloseTo(.1,2);
+ await page.locator('#audioFile').setInputFiles(toneFile('Bài C.wav',.7,1320));await page.waitForFunction(()=>playlist.length===3&&!loading);expect(await page.evaluate(()=>buf.duration)).toBeCloseTo(3.1,2);
+ await page.getByRole('button',{name:'Xóa bài 3',exact:true}).click();await page.waitForFunction(()=>playlist.length===2);expect(await page.evaluate(()=>cues[0].start)).toBeCloseTo(.1,2);
+ await page.locator('#audioFile').setInputFiles({name:'broken.wav',mimeType:'audio/wav',buffer:Buffer.from('not audio')});await page.waitForFunction(()=>!loading);expect(await page.evaluate(()=>playlist.length)).toBe(2);await expect(page.locator('#msg')).toContainText('broken.wav');
+ await page.locator('#play').click();await page.waitForFunction(()=>!!run&&currentTime()>.1);expect(await page.evaluate(()=>run.src.nodes.length)).toBe(2);expect(await page.evaluate(()=>trackAt(currentTime()).title)).toBe('Bài B');
+ await page.waitForFunction(()=>currentTime()>1.2);expect(await page.evaluate(()=>trackAt(currentTime()).title)).toBe('Bài A');await expect(page.locator('#playlistNow')).toContainText('2 / 2');await page.locator('#stop').click();
+ if(await page.evaluate(()=>canRecord())){await page.locator('#record').click();await page.waitForFunction(()=>currentTime()>.15);await page.locator('#record').click();await page.waitForFunction(()=>run?.paused);const held=await page.evaluate(()=>currentTime());await page.waitForTimeout(100);expect(await page.evaluate(()=>currentTime())).toBeCloseTo(held,2);await page.locator('#record').click();await page.waitForFunction(()=>!!document.querySelector('#out video'),{timeout:20000});const pending=page.waitForEvent('download');await page.locator('#out a').click();const download=await pending;await download.saveAs(testInfo.outputPath('playlist-'+download.suggestedFilename()))}
+ await page.locator('#clearPlaylist').click();expect(await page.evaluate(()=>playlist.length)).toBe(0);await expect(page.locator('#play')).toBeDisabled();expect(errors).toEqual([]);
+});
 test('album template keeps studio layers and reserves space for karaoke',async({page},testInfo)=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
  await page.locator('#audioFile').setInputFiles(path.join(__dirname,'fixtures/tone.wav'));await page.waitForFunction(()=>!!env&&!loading);
