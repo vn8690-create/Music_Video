@@ -1,4 +1,21 @@
 const {test,expect}=require('@playwright/test');const path=require('node:path');
+test('multiple transitions cycle, stay stable when seeking and export',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
+ await page.locator('[data-tab=effects]').click();await expect(page.locator('[data-transition=fade]')).toBeDisabled();
+ await page.locator('[data-transition=wipe]').check();await page.locator('[data-transition=iris]').check();
+ const cycle=await page.evaluate(()=>{switches=Array.from({length:13},(_,i)=>i*120);return Array.from({length:6},(_,i)=>transitionAt(i+1))});expect(cycle).toEqual(['fade','wipe','iris','fade','wipe','iris']);
+ await page.locator('#transition').selectOption('random');
+ const sequence=await page.evaluate(()=>Array.from({length:12},(_,i)=>transitionAt(i+1)));
+ expect(sequence.every(x=>['fade','wipe','iris'].includes(x))).toBe(true);expect(sequence.every((x,i)=>!i||x!==sequence[i-1])).toBe(true);
+ expect(await page.evaluate(()=>[transitionAt(9),transitionAt(2),transitionAt(9)])).toEqual([sequence[8],sequence[1],sequence[8]]);
+ await expect(page.locator('#shuffleTransitions')).toBeEnabled();await page.locator('#allTransitions').click();expect(await page.locator('[data-transition]:checked').count()).toBe(5);
+ await page.locator('[data-tab=media]').click();await page.locator('#audioFile').setInputFiles(path.join(__dirname,'fixtures/tone.wav'));await page.waitForFunction(()=>!!env&&!loading);
+ await page.locator('#imageFiles').setInputFiles([path.join(__dirname,'fixtures/cover.png'),path.join(__dirname,'fixtures/logo.png')]);await page.waitForFunction(()=>imgs.length===2);
+ await page.locator('[data-tab=effects]').click();await page.locator('#gap').fill('2');await page.locator('#beatCuts').uncheck();expect(await page.evaluate(()=>switches.length)).toBeGreaterThan(1);
+ await page.evaluate(()=>{for(const t of [2.1,.2,2.4])drawFrame(t)});
+ if(await page.evaluate(()=>canRecord())){await page.locator('#record').click();await page.waitForFunction(()=>!!document.querySelector('#out video'),{timeout:20000});await expect(page.locator('#out a')).toBeVisible()}
+ expect(errors).toEqual([]);
+});
 function toneFile(name,seconds,hz,rate=22050){const samples=Math.round(seconds*rate),data=Buffer.alloc(44+samples*2);data.write('RIFF',0);data.writeUInt32LE(data.length-8,4);data.write('WAVEfmt ',8);data.writeUInt32LE(16,16);data.writeUInt16LE(1,20);data.writeUInt16LE(1,22);data.writeUInt32LE(rate,24);data.writeUInt32LE(rate*2,28);data.writeUInt16LE(2,32);data.writeUInt16LE(16,34);data.write('data',36);data.writeUInt32LE(samples*2,40);for(let i=0;i<samples;i++)data.writeInt16LE(Math.round(Math.sin(i/rate*hz*Math.PI*2)*10000),44+i*2);return{name,mimeType:'audio/wav',buffer:data}}
 test('playlist appends songs, reorders local subtitles and records consecutive audio',async({page},testInfo)=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');

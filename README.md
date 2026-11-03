@@ -97,3 +97,10 @@ Mỗi bài có nút **Thêm sub / Đổi sub**: nhập ASS/LRC/SRT/VTT đã có 
 Âm thanh được giải mã từng bài, giữ một bản PCM cho mỗi bài và lập lịch cùng đồng hồ Web Audio; không ghép thêm một bản PCM khổng lồ. MP3 được phát theo nội dung đã giải mã, không tự xóa khoảng im lặng có sẵn trong file. Trình duyệt vẫn cần RAM cho toàn bộ danh sách: giới hạn PCM hiện tại là 256 MiB trên thiết bị con trỏ chạm và 768 MiB trên máy tính. Khi đạt giới hạn, app giữ những bài đã thêm và báo chia album. Không cam kết số bài cố định vì độ dài/số kênh/tần số lấy mẫu khác nhau. Đóng tab sẽ mất danh sách vì app không lưu file nhạc cá nhân.
 
 Xuất vẫn theo thời gian thực. Giữ tab mở; việc tạm giữ và tiếp tục lượt xuất của V4.1 hoạt động cho cả danh sách.
+
+
+## V5.2 — Nhiều kiểu chuyển cảnh trong một video
+
+Vào **Hiệu ứng → Chọn một hoặc nhiều kiểu**, tick Hòa tan / Quét ngang / Trượt / Vòng tròn / Cắt thẳng. Chọn **Luân phiên** để dùng theo thứ tự các ô, hoặc **Ngẫu nhiên** để xáo từng lượt, tránh hai kiểu giống nhau liền nhau khi chọn từ hai kiểu trở lên. **Chọn tất cả** bật cả năm; bỏ bớt để phối theo ý. Luôn giữ ít nhất một kiểu được chọn.
+
+Mỗi lần đổi ảnh dùng một kiểu đã chọn. Lượt ngẫu nhiên được giữ ổn định khi tua, tạm dừng và xuất lại trong cùng phiên; bấm **Đảo lượt ngẫu nhiên** để đổi cách phối. Chuyển cảnh áp dụng cho cả bố cục Album và ảnh toàn màn hình, trên timeline chung của danh sách bài. Chỉ có một ảnh thì chọn nhiều kiểu không tạo thêm cảnh mới.
