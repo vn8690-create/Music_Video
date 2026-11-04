@@ -1,4 +1,19 @@
 const {test,expect}=require('@playwright/test');const path=require('node:path');
+test('native music picker imports multiple files and displays its result beside the picker',async({page})=>{
+ await page.goto('/');const pending=page.waitForEvent('filechooser');await page.locator('#audioFile').click();const picker=await pending;
+ expect(picker.isMultiple()).toBe(true);await picker.setFiles([toneFile('Nhạc đầu.wav',.6,440),toneFile('Nhạc tiếp.wav',.6,880)]);
+ await page.waitForFunction(()=>playlist.length===2&&!loading);await expect(page.locator('#audioImportStatus')).toContainText('Đã thêm 2 bài');await expect(page.locator('#playlist .track-row')).toHaveCount(2);
+ expect(await page.locator('#audioFile').evaluate(input=>input.files.length)).toBe(2);
+ await page.locator('#audioFile').setInputFiles({name:'file-rong.wav',mimeType:'audio/wav',buffer:Buffer.alloc(0)});await page.waitForFunction(()=>!loading);await expect(page.locator('#audioImportStatus')).toContainText('File rỗng');await expect(page.locator('#audioFile')).toBeEnabled();await expect(page.locator('#playlist .track-row')).toHaveCount(2);
+});
+test('music imports when offline audio rendering is unavailable and decoding failures remain visible',async({page})=>{
+ await page.addInitScript(()=>{window.OfflineAudioContext=undefined;window.webkitOfflineAudioContext=undefined});await page.goto('/');
+ await page.locator('#audioFile').setInputFiles(toneFile('Bài trên điện thoại.wav',.7,440));await page.waitForFunction(()=>playlist.length===1&&!loading);await expect(page.locator('#audioImportStatus')).toContainText('nhịp theo âm lượng');
+ expect(await page.evaluate(()=>env.n>0&&env.lo.every(Number.isFinite))).toBe(true);
+ await page.locator('#audioFile').setInputFiles({name:'khong-doc-duoc.wav',mimeType:'audio/wav',buffer:Buffer.from('not an audio file')});await page.waitForFunction(()=>!loading);await expect(page.locator('#audioImportStatus')).toContainText('khong-doc-duoc.wav');await expect(page.locator('#audioImportStatus')).toHaveAttribute('data-state','error');await expect(page.locator('#playlist .track-row')).toHaveCount(1);
+ expect(await page.evaluate(async()=>{try{await audioTask(new Promise(()=>{}),5,'Đọc quá lâu');return false}catch(e){return e.message==='Đọc quá lâu'}})).toBe(true);
+ await page.locator('#imageFiles').setInputFiles(path.join(__dirname,'fixtures/cover.png'));await page.waitForFunction(()=>imgs.length===1);await page.locator('#play').click();await page.waitForFunction(()=>!!run&&currentTime()>.05);await page.locator('#stop').click();
+});
 test('advanced blur, flip, rotate and blend transitions paint distinct frames and export',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
  await page.locator('#audioFile').setInputFiles(path.join(__dirname,'fixtures/tone.wav'));await page.waitForFunction(()=>!!env&&!loading);

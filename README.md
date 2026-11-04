@@ -118,3 +118,8 @@ Các kiểu lật là phép mô phỏng bằng canvas 2D, không phải dựng m
 ## V5.3.1 — Nhập tên bài ngay trong mẫu Album
 
 Vào **Bố cục → Album đĩa than → Tên bài hát trên video** để nhập tên hiển thị phía trên đĩa. Ô này đồng bộ với ô tên ở **Tư liệu**. Chưa nhập hoặc xóa hết thì không vẽ chữ mẫu “Tên bài hát”. Tên tự nhập áp dụng cho cả video; nếu muốn tự đổi theo từng bài trong album, bật lại **Tư liệu → Hiện tên bài đang phát khi có nhiều bài**.
+
+
+## V5.3.2 — Trạng thái nhập nhạc trên điện thoại
+
+Ngay dưới nút chọn nhạc có trạng thái nhận file, đọc, giải mã, phân tích và lỗi. Mỗi bài đọc thành công hiện ngay trong danh sách; file lỗi không xóa các bài đã có. App giữ file được chọn trong lúc đọc, mở âm thanh từ thao tác chọn file và giới hạn thời gian chờ đọc/giải mã. Nếu phân tích nhịp bằng Web Audio không chạy được, app dùng mức âm lượng để tạo hiệu ứng, giữ nguyên âm thanh gốc. File iCloud/Drive cần tải về máy trước nếu báo chưa đọc được; codec không được trình duyệt hỗ trợ cần chuyển sang MP3/WAV, không chỉ đổi đuôi.

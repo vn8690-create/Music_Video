@@ -50,21 +50,59 @@ function renderPlaylist(){
 }
 function refreshPlaylistTimeline(cleared=false){buildPlaylist();playlistCues();$('#lyrics').value=playlistLrc();plan();renderPlaylist();ready();redraw();updateClock(0);say('Đã cập nhật '+playlist.length+' bài.'+(cleared?' Sub toàn album cần nhập lại vì thứ tự/thời lượng đã đổi. Sub gắn từng bài vẫn giữ đúng mốc.':''))}
 function moveTrack(index,delta){if(run||loading||!playlist[index+delta])return;captureSingleSub();const cleared=clearGlobalTiming();[playlist[index],playlist[index+delta]]=[playlist[index+delta],playlist[index]];refreshPlaylistTimeline(cleared)}
+function importStatus(text,state='busy'){
+ const status=$('#audioImportStatus');status.hidden=false;status.textContent=text;status.dataset.state=state;status.setAttribute('aria-busy',String(state==='busy'));say(text);
+}
+function prepareAudioImport(){
+ if(!AudioCtx)throw Error('Trình duyệt thiếu Web Audio. Hãy mở bằng Safari hoặc Chrome.');
+ if(!AC||AC.state==='closed')AC=new AudioCtx();
+ AC.onstatechange=()=>{if(run?.mode==='record'&&!run.stopping&&!run.paused&&AC.state!=='running')pauseExport('audio')};
+ // Resume directly in the picker/change gesture; never wait for autoplay permission to decode.
+ if(AC.state!=='running')AC.resume().catch(()=>{});
+}
+function audioTask(promise,ms,message){return new Promise((resolve,reject)=>{
+ const timer=setTimeout(()=>reject(Error(message)),ms);
+ Promise.resolve(promise).then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)});
+})}
+async function basicAudioEnvelope(decoded){
+ const n=Math.max(1,Math.ceil(decoded.duration*FPS)),values=new Float32Array(n),channels=Array.from({length:decoded.numberOfChannels},(_,i)=>decoded.getChannelData(i));
+ for(let frame=0;frame<n;frame++){
+  const begin=Math.floor(frame*decoded.sampleRate/FPS),end=Math.min(decoded.length,Math.floor((frame+1)*decoded.sampleRate/FPS)),step=Math.max(1,Math.floor((end-begin)/64));let sum=0,count=0;
+  for(let i=begin;i<end;i+=step)for(const channel of channels){sum+=channel[i]*channel[i];count++}values[frame]=Math.sqrt(sum/Math.max(1,count));
+  if(frame%600===599)await new Promise(resolve=>setTimeout(resolve,0));
+ }
+ const levels=normalize(values);return buildAudioEnvelope([levels,levels,levels],n);
+}
 async function addSongs(files){
- if(run||loading)return;files=Array.from(files||[]).filter(f=>f.type.startsWith('audio/')||/\.(wav|mp3|m4a|flac|ogg|aac|aiff|opus)$/i.test(f.name));if(!files.length)return say('Chọn file nhạc MP3/WAV/M4A/FLAC nhé.');
- const initial=playlist.length;captureSingleSub();loading=true;ready();let added=0,failures=[];let memory=playlist.reduce((n,t)=>n+audioBytes(t.buffer),0);
+ if(run||loading)return;
+ files=Array.from(files||[]);if(!files.length)return;
+ const initial=playlist.length;captureSingleSub();loading=true;ready();let added=0,failures=[],basicUsed=false;let memory=playlist.reduce((n,t)=>n+audioBytes(t.buffer),0);
+ importStatus('Đã nhận '+files.length+' file. Đang chuẩn bị đọc nhạc…');
  try{
-  if(!AudioCtx||!OfflineCtx)throw Error('Trình duyệt thiếu Web Audio');AC=AC||new AudioCtx();AC.onstatechange=()=>{if(run?.mode==='record'&&!run.stopping&&!run.paused&&AC.state!=='running')pauseExport('audio')};
+  prepareAudioImport();
   for(let i=0;i<files.length;i++){
-   const file=files[i];say('Đang đọc bài '+(i+1)+' / '+files.length+' · '+file.name);
-   try{let decoded=await AC.decodeAudioData(await file.arrayBuffer());const bytes=audioBytes(decoded);if(memory+bytes>AUDIO_MEMORY_LIMIT){decoded=null;failures.push('Album vượt bộ nhớ âm thanh của trình duyệt; hãy chia thành vài video nhỏ hơn.');break}
-    const features=await analyzeAudio(decoded);playlist.push({id:playlistNextId++,name:file.name,title:file.name.replace(/\.[^.]+$/,''),buffer:decoded,duration:decoded.duration,env:features,cues:[],start:0});memory+=bytes;added++;
+   const file=files[i],prefix=(i+1)+' / '+files.length+' · '+file.name;
+   try{
+    if(!(file.type||'').startsWith('audio/')&&!/\.(wav|wave|mp3|m4a|flac|ogg|aac|aif|aiff|opus|mp4|webm|weba)$/i.test(file.name.trim()))throw Error('Chưa nhận ra định dạng nhạc. Hãy chọn MP3, WAV hoặc M4A.');
+    if(!file.size)throw Error('File rỗng. Hãy tải đầy đủ file về ứng dụng Tệp rồi chọn lại.');
+    importStatus('Đang đọc file '+prefix);
+    const data=await audioTask(file.arrayBuffer(),60000,'Chưa đọc được file. Nếu file ở iCloud/Drive, hãy tải về máy trong ứng dụng Tệp rồi chọn lại.');
+    importStatus('Đang giải mã '+prefix);
+    let decoded;try{decoded=await audioTask(AC.decodeAudioData(data),60000,'Giải mã quá lâu. Thử một bản MP3 hoặc WAV ngắn hơn.')}catch(e){throw Error(e.name==='EncodingError'||e.name==='NotSupportedError'?'Trình duyệt không giải mã được file này. Hãy xuất lại thành MP3/WAV; chỉ đổi đuôi file sẽ không đủ.':e.message)}
+    const bytes=audioBytes(decoded);if(memory+bytes>AUDIO_MEMORY_LIMIT){decoded=null;failures.push('Album vượt bộ nhớ âm thanh của trình duyệt; hãy chia thành vài video nhỏ hơn.');break}
+    importStatus('Đang phân tích nhịp '+prefix);
+    let features;try{if(!OfflineCtx||basicUsed)throw Error('Use volume analysis');features=await audioTask(analyzeAudio(decoded),20000,'Phân tích nhịp quá lâu')}catch{
+     basicUsed=true;importStatus('Đang phân tích âm lượng '+prefix);features=await basicAudioEnvelope(decoded);
+    }
+    playlist.push({id:playlistNextId++,name:file.name,title:file.name.replace(/\.[^.]+$/,''),buffer:decoded,duration:decoded.duration,env:features,cues:[],start:0});memory+=bytes;added++;
+    // Show each successful song immediately, even while subsequent files are loading.
+    let offset=0;for(const track of playlist){track.start=offset;offset+=track.duration}renderPlaylist();
    }catch(e){failures.push(file.name+': '+e.message)}
    await new Promise(resolve=>setTimeout(resolve,0));
   }
-  if(added){const cleared=clearGlobalTiming();buildPlaylist();if(!initial&&playlist.length===1&&$('#lyrics').value.trim())playlistGlobalCues=parseLyrics($('#lyrics').value,buf.duration);playlistCues();plan();renderPlaylist();updateClock(0);redraw();say('Đã thêm '+added+' bài · tổng '+playlist.length+' bài, '+clock(buf.duration)+'.'+(cleared?' Sub toàn album cần nhập lại.':'')+(failures.length?' '+failures.join(' · '):''))}
-  else say(failures.join(' · ')||'Không thêm được bài mới.');
- }catch(e){say('Không đọc được nhạc: '+e.message)}
+  if(added){const cleared=clearGlobalTiming();buildPlaylist();if(!initial&&playlist.length===1&&$('#lyrics').value.trim())playlistGlobalCues=parseLyrics($('#lyrics').value,buf.duration);playlistCues();plan();renderPlaylist();updateClock(0);redraw();importStatus('Đã thêm '+added+' bài · tổng '+playlist.length+' bài, '+clock(buf.duration)+'.'+(cleared?' Sub toàn album cần nhập lại.':'')+(basicUsed?' Hiệu ứng đang dùng nhịp theo âm lượng.':'')+(failures.length?' '+failures.join(' · '):''),failures.length?'warning':'success')}
+  else importStatus(failures.join(' · ')||'Không thêm được bài mới.','error');
+ }catch(e){importStatus('Không đọc được nhạc: '+e.message,'error')}
  finally{loading=false;ready();renderPlaylist()}
 }
 function playlistSourceAt(offset){
@@ -74,9 +112,10 @@ function playlistSourceAt(offset){
  return{nodes,stop(){for(const src of nodes)try{src.stop()}catch{}},disconnect(){for(const src of nodes)try{src.disconnect()}catch{}}};
 }
 function initPlaylist(){
- $('#audioFile').onchange=e=>{const files=[...e.target.files];e.target.value='';addSongs(files)};
+ $('#audioFile').onclick=e=>{if(run||loading)return;e.target.value='';try{prepareAudioImport()}catch(error){importStatus(error.message,'error')}};
+ $('#audioFile').onchange=e=>{const files=[...e.target.files];addSongs(files)};
  drop('#audioDrop',addSongs);
- $('#clearPlaylist').onclick=()=>{if(run||loading)return;playlist.length=0;clearGlobalTiming();refreshPlaylistTimeline()};
+ $('#clearPlaylist').onclick=()=>{if(run||loading)return;playlist.length=0;clearGlobalTiming();refreshPlaylistTimeline();$('#audioImportStatus').hidden=true};
  $('#playlistTitles').oninput=()=>{playlistActive=-1;studioStatus();playlistNow(currentTime());redraw()};
  renderPlaylist();
 }
