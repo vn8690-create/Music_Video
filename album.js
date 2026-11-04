@@ -41,7 +41,7 @@ function drawAlbumOverlay(time,frame,amp){
  const label=($('#albumLabel').value.trim()||'YOUR MUSIC').toUpperCase();
  cx.fillStyle=C.muted;cx.font='600 '+Math.round(S*.017)+'px "Segoe UI",sans-serif';
  cx.fillText(label,left,G.A*(G.portrait?.56:.066),G.W*(G.portrait?.47:.40));
- const title=displayTitle(time)||'Tên bài hát',tw=G.W*(G.portrait?.46:.42);
+ const title=displayTitle(time),tw=G.W*(G.portrait?.46:.42);
  let size=S*(G.portrait?.050:.055),font='500 '+size+'px Georgia,"Yu Mincho",serif';
  let lines=albumLines(title,tw,font,3);while(lines.length>=3&&size>S*.028&&cx.measureText(title).width>tw*2.7){size*=.93;font='500 '+size+'px Georgia,"Yu Mincho",serif';lines=albumLines(title,tw,font,3)}
  cx.font=font;cx.fillStyle=C.ink;const ty=G.A*(G.portrait?.605:.12);
@@ -78,6 +78,14 @@ function activateAlbum(){
  $('#accent').value=albumColors().accent;syncEffects();albumReflow();albumUI();
 }
 function initAlbumStudio(){
+ const title=$('#title'),albumTitle=$('#albumTitle');
+ albumTitle.value=title.value;
+ albumTitle.addEventListener('input',()=>{title.value=albumTitle.value;title.dispatchEvent(new Event('input',{bubbles:true}))});
+ title.addEventListener('input',()=>{
+  albumTitle.value=title.value;
+  // Explicit text takes priority over automatic playlist filenames, including an empty title.
+  $('#playlistTitles').checked=false;studioStatus();playlistNow(currentTime());redraw();
+ });
  $('#layoutMode').onchange=()=>{if(isAlbum())activateAlbum();else{if(albumPrevious){preset=albumPrevious.preset;selectedFx.clear();for(const fx of albumPrevious.effects)selectedFx.add(fx);$('#accent').value=albumPrevious.accent;restoreLayout(albumPrevious.layout);albumPrevious=null}albumUI();redraw()}};
  $('#albumQuick').onclick=()=>{$('#layoutMode').value='album';activateAlbum();showTab('layout')};
  $('#albumTheme').onchange=()=>{$('#accent').value=albumColors().accent;redraw()};

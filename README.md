@@ -113,3 +113,8 @@ Hiện có **15 kiểu**: năm kiểu cơ bản, Mờ mềm, Zoom hòa tan, Zoom
 Chỉnh thời lượng 0,2–2,5 giây, nhịp chuyển mượt hoặc đều, và độ mạnh. Nếu đổi ảnh nhanh, thời lượng chuyển tự giới hạn ở 45% khoảng đổi ảnh để tránh chồng cảnh. Các lớp phổ nhạc/logo/đĩa và karaoke được vẽ sau phần chuyển ảnh, nên không bị lật hay làm mờ theo cảnh. Mẫu Album vẫn dùng được.
 
 Các kiểu lật là phép mô phỏng bằng canvas 2D, không phải dựng mô hình 3D. Thiết bị không có Canvas filter dùng cách thu nhỏ/phóng mịn để tạo mờ gần đúng. Khi xuất nhiều hiệu ứng nặng, chọn chất lượng phù hợp với thiết bị; đây vẫn là trình dựng video chạy theo thời gian thực, không phải toàn bộ tính năng CapCut.
+
+
+## V5.3.1 — Nhập tên bài ngay trong mẫu Album
+
+Vào **Bố cục → Album đĩa than → Tên bài hát trên video** để nhập tên hiển thị phía trên đĩa. Ô này đồng bộ với ô tên ở **Tư liệu**. Chưa nhập hoặc xóa hết thì không vẽ chữ mẫu “Tên bài hát”. Tên tự nhập áp dụng cho cả video; nếu muốn tự đổi theo từng bài trong album, bật lại **Tư liệu → Hiện tên bài đang phát khi có nhiều bài**.

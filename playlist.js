@@ -77,6 +77,6 @@ function initPlaylist(){
  $('#audioFile').onchange=e=>{const files=[...e.target.files];e.target.value='';addSongs(files)};
  drop('#audioDrop',addSongs);
  $('#clearPlaylist').onclick=()=>{if(run||loading)return;playlist.length=0;clearGlobalTiming();refreshPlaylistTimeline()};
- $('#playlistTitles').oninput=()=>{playlistActive=-1;playlistNow(currentTime());redraw()};
+ $('#playlistTitles').oninput=()=>{playlistActive=-1;studioStatus();playlistNow(currentTime());redraw()};
  renderPlaylist();
 }
