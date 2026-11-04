@@ -8,7 +8,7 @@ Sau khi bật GitHub Pages, địa chỉ dự kiến: **https://vn8690-create.gi
 
 Nếu chưa bật: vào **Settings → Pages → Build and deployment → Deploy from a branch → main → /(root) → Save**. Chờ GitHub triển khai. Repo có sẵn index.html và .nojekyll.
 
-Có thể tải cả repo về máy tính (giữ index.html, album.js, playlist.js, transitions.js và studio.css cùng thư mục) rồi mở index.html; để dùng trên iPhone nên mở trang HTTPS bằng Safari, Android bằng Chrome. Trình duyệt trong Facebook/Zalo có thể hạn chế chọn file, âm thanh hoặc tải xuống.
+Có thể tải cả repo về máy tính (giữ toàn bộ các file HTML/JS/CSS cùng thư mục) rồi mở index.html; để dùng trên iPhone nên mở trang HTTPS bằng Safari, Android bằng Chrome. Trình duyệt trong Facebook/Zalo có thể hạn chế chọn file, âm thanh hoặc tải xuống.
 
 ## Phối nhiều hiệu ứng
 
@@ -32,7 +32,7 @@ Có 15 lớp độc lập: zoom bass, rung, glow, RGB, zoom trôi, xoay, VHS, gl
 
 ## Karaoke
 
-ASS có `\\k`/`\\kf` hoặc enhanced LRC: tô theo mốc từ. LRC/SRT chỉ có thời gian câu: tô chữ ước lượng. ASS chỉ đọc lời/timing, không giữ toàn bộ tag định dạng nâng cao. TXT chưa có mốc: dùng **Căn từng câu** và tải LRC. Không có nhận lời tự động bằng AI.
+ASS có `\\k`/`\\kf` hoặc enhanced LRC: tô theo mốc từ. LRC/SRT chỉ có thời gian câu: tô chữ ước lượng. ASS chỉ đọc lời/timing, không giữ toàn bộ tag định dạng nâng cao. TXT chưa có mốc: dùng **Căn từng câu** và tải LRC. Từ V5.4 có nút Tạo sub AI thử nghiệm ngay trong thẻ Karaoke (xem hướng dẫn bên dưới).
 
 Offset dương làm sub xuất hiện muộn. Thay hiệu ứng không đổi mốc từ. Nhạc không qua tách giọng/đổi pitch; được mã hóa lại theo codec trình duyệt.
 
@@ -81,7 +81,7 @@ Kiểm thử che/hiện trang được mô phỏng bằng sự kiện visibility
 
 Đĩa, cột phổ, sóng, vòng và logo tiếp tục dùng hệ thống lớp cũ: chỉnh vị trí/cỡ/độ rõ, ảnh nhãn, tốc độ và kéo trên canvas. Đổi khung ngang/dọc/vuông sẽ sắp lại mẫu; **Sắp lại vị trí theo khung hình** trả về vị trí gợi ý. Sub ASS/LRC/SRT có thời gian được ghi vào video, phần album dành vùng dưới cho lời. Tắt Hiện sub để dùng toàn khung.
 
-Bản GitHub Pages dựng trong trình duyệt, không chạy Python/Whisper local. Dùng file sub đã căn từ Karaoke Studio/bản PC; lời TXT có thể căn từng câu bằng tay ở Karaoke. Chức năng giữ lượt xuất khi chuyển tab của V4.1 vẫn được giữ.
+Bản GitHub Pages dựng trong trình duyệt. V5.4 bổ sung Whisper chạy bằng WebAssembly trong trình duyệt, không cần Python. Vẫn có thể nhập sub đã căn từ Karaoke Studio/bản PC hoặc căn TXT bằng tay. Chức năng giữ lượt xuất khi chuyển tab của V4.1 vẫn được giữ.
 
 Nếu thấy V4.1, tải lại trang để nhận giao diện V5; service worker có bộ nhớ giao diện mới. Các file cá nhân không được đưa lên repo.
 
@@ -123,3 +123,21 @@ Vào **Bố cục → Album đĩa than → Tên bài hát trên video** để nh
 ## V5.3.2 — Trạng thái nhập nhạc trên điện thoại
 
 Ngay dưới nút chọn nhạc có trạng thái nhận file, đọc, giải mã, phân tích và lỗi. Mỗi bài đọc thành công hiện ngay trong danh sách; file lỗi không xóa các bài đã có. App giữ file được chọn trong lúc đọc, mở âm thanh từ thao tác chọn file và giới hạn thời gian chờ đọc/giải mã. Nếu phân tích nhịp bằng Web Audio không chạy được, app dùng mức âm lượng để tạo hiệu ứng, giữ nguyên âm thanh gốc. File iCloud/Drive cần tải về máy trước nếu báo chưa đọc được; codec không được trình duyệt hỗ trợ cần chuyển sang MP3/WAV, không chỉ đổi đuôi.
+
+
+
+## V5.4 — Tạo sub AI trên điện thoại (bản thử)
+
+1. Mở Studio bằng HTTPS trong Safari/Chrome, thêm nhạc ở **Tư liệu**.
+2. Vào **Karaoke → Tạo sub AI**, chọn bài và ngôn ngữ Việt / Nhật / Anh / tự nhận diện.
+3. Lần đầu chọn **Thử 30 giây**, nhập giây bắt đầu đoạn có giọng hát. Khi chạy ổn mới chọn **Cả bài** (tối đa 10 phút).
+4. Có lời chuẩn thì mở **Có lời chuẩn để đối chiếu?**, dán đúng lời của đoạn đang chọn, mỗi câu một dòng. Không dán cả bài khi chỉ thử 30 giây.
+5. Bấm **Tạo sub AI**. Giữ tab mở, dùng Wi-Fi lần đầu để tải bộ AI. Có tiến độ, thời gian đã chạy và **Hủy AI** để dừng worker, giải phóng model. Không tải lại/đóng tab trước khi lưu.
+6. Xem bản nháp, **Nghe câu**, sửa lời/mốc, bỏ câu AI nghe nhầm. Câu đối chiếu chưa khớp có mốc trống; phải sửa hoặc bỏ câu đó trước khi áp dụng.
+7. **Áp dụng sub AI** để đưa vào video hoặc **Tải bản nháp LRC** để giữ file. Áp dụng chỉ thay vùng đã xử lý của bài đã chọn, giữ sub các bài khác và các đoạn ngoài vùng đó.
+
+Nhận diện dùng `Xenova/whisper-tiny` đa ngôn ngữ, q8, WASM một luồng, Transformers.js 3.8.1; revision model cố định trong worker. Model/thư viện tải từ Hugging Face và jsDelivr, có thể được trình duyệt lưu cache. Âm thanh được lấy mẫu lại 16 kHz trên máy, chỉ chuyển nội bộ sang Web Worker; không gửi file nhạc tới dịch vụ AI, không dùng API key hoặc dịch vụ trả phí. Các máy chủ tải model vẫn nhận yêu cầu mạng thông thường. Mở `file://` không chạy AI; hãy dùng link HTTPS hoặc server localhost.
+
+Lời AI gốc có mốc từ do model dự đoán. Khi dán lời chuẩn hoặc sửa lời/mốc thủ công, app dùng mốc câu và tô từ ước lượng; không coi đối chiếu văn bản là forced alignment chính xác. Nhạc nền, luyến láy, đoạn không hát và ngôn ngữ đều có thể gây sai hoặc lời bịa. Hãy nghe lại. Bản này không tách vocal, không bảo đảm khớp mọi bài và không cam kết chạy nền trên iOS. Hiệu năng thực tế cần thử trên điện thoại của bạn.
+
+Kiểm tra và giới hạn: xem [VALIDATION_AI.md](VALIDATION_AI.md).

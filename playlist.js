@@ -6,7 +6,7 @@ function audioBytes(buffer){return buffer.length*buffer.numberOfChannels*4}
 function trackAt(time){return playlist.length?playlist[search(playlist,Math.max(0,time),t=>t.start)]:null}
 function displayTitle(time){const track=trackAt(time);return playlist.length>1&&$('#playlistTitles').checked?track.title:$('#title').value.trim()}
 function trackClock(time){const track=trackAt(time);return track&&playlist.length>1?{time:clamp(time-track.start,0,track.duration),duration:track.duration}:{time,duration:buf?.duration||0}}
-function playlistControls(){const locked=!!run||loading||starting;for(const button of document.querySelectorAll('#playlist button,#playlist input'))button.disabled=locked||button.dataset.edge==='true';$('#clearPlaylist').disabled=locked||!playlist.length}
+function playlistControls(){const locked=!!run||loading||starting||aiBusy();for(const button of document.querySelectorAll('#playlist button,#playlist input'))button.disabled=locked||button.dataset.edge==='true';$('#clearPlaylist').disabled=locked||!playlist.length}
 function playlistNow(time){const track=trackAt(time),index=track?playlist.indexOf(track):-1;if(index!==playlistActive){playlistActive=index;for(const row of document.querySelectorAll('#playlist .track-row'))row.classList.toggle('is-playing',Number(row.dataset.track)===track?.id)}
  $('#playlistNow').textContent=track?(index+1)+' / '+playlist.length+' · '+track.title:'';
  if(playlist.length>1&&$('#playlistTitles').checked)$('#projectName').textContent=track?.title||'Album mới';
@@ -42,14 +42,14 @@ function renderPlaylist(){
    ['↑','Đưa bài '+(index+1)+' lên',()=>moveTrack(index,-1),index===0],
    ['↓','Đưa bài '+(index+1)+' xuống',()=>moveTrack(index,1),index===playlist.length-1],
    ['×','Xóa bài '+(index+1),()=>{captureSingleSub();const cleared=clearGlobalTiming();playlist.splice(index,1);refreshPlaylistTimeline(cleared)},false]
-  ]){const b=document.createElement('button');b.type='button';b.textContent=text;b.title=b.ariaLabel=label;b.onclick=()=>{if(run||loading)return;fn()};b.dataset.edge=String(disabled);b.disabled=disabled;actions.append(b)}
+  ]){const b=document.createElement('button');b.type='button';b.textContent=text;b.title=b.ariaLabel=label;b.onclick=()=>{if(aiBusy()||run||loading)return;fn()};b.dataset.edge=String(disabled);b.disabled=disabled;actions.append(b)}
   const sub=document.createElement('button');sub.type='button';sub.textContent=track.cues.length?'Đổi sub':'Thêm sub';sub.className='track-sub';sub.ariaLabel='Phụ đề bài '+(index+1);
-  const picker=document.createElement('input');picker.type='file';picker.accept='.ass,.ssa,.lrc,.srt,.vtt';picker.hidden=true;picker.ariaLabel='Chọn phụ đề bài '+(index+1);sub.onclick=()=>picker.click();picker.onchange=async()=>{const file=picker.files[0];picker.value='';if(!file||run||loading)return;try{const rows=parseLyrics(await file.text(),track.duration);if(run||loading||!playlist.includes(track))return;if(!rows.length)throw Error('File chưa có mốc thời gian. Dùng ASS/LRC/SRT đã căn.');const cleared=clearGlobalTiming();track.cues=rows;playlistCues();$('#lyrics').value=playlistLrc();renderPlaylist();redraw();say('Đã gắn sub cho '+track.title+'. Mốc bài tự dời theo thứ tự album.'+(cleared?' Đã thay sub toàn album.':''))}catch(e){say('Không đọc được sub: '+e.message)}};
+  const picker=document.createElement('input');picker.type='file';picker.accept='.ass,.ssa,.lrc,.srt,.vtt';picker.hidden=true;picker.ariaLabel='Chọn phụ đề bài '+(index+1);sub.onclick=()=>picker.click();picker.onchange=async()=>{const file=picker.files[0];picker.value='';if(!file||run||loading)return;try{const rows=parseLyrics(await file.text(),track.duration);if(aiBusy()||run||loading||!playlist.includes(track))return;if(!rows.length)throw Error('File chưa có mốc thời gian. Dùng ASS/LRC/SRT đã căn.');const cleared=clearGlobalTiming();track.cues=rows;playlistCues();$('#lyrics').value=playlistLrc();renderPlaylist();redraw();say('Đã gắn sub cho '+track.title+'. Mốc bài tự dời theo thứ tự album.'+(cleared?' Đã thay sub toàn album.':''))}catch(e){say('Không đọc được sub: '+e.message)}};
   info.append(sub,picker);row.append(number,info,actions);box.append(row);
  });playlistNow(position);playlistControls();
 }
 function refreshPlaylistTimeline(cleared=false){buildPlaylist();playlistCues();$('#lyrics').value=playlistLrc();plan();renderPlaylist();ready();redraw();updateClock(0);say('Đã cập nhật '+playlist.length+' bài.'+(cleared?' Sub toàn album cần nhập lại vì thứ tự/thời lượng đã đổi. Sub gắn từng bài vẫn giữ đúng mốc.':''))}
-function moveTrack(index,delta){if(run||loading||!playlist[index+delta])return;captureSingleSub();const cleared=clearGlobalTiming();[playlist[index],playlist[index+delta]]=[playlist[index+delta],playlist[index]];refreshPlaylistTimeline(cleared)}
+function moveTrack(index,delta){if(aiBusy()||run||loading||!playlist[index+delta])return;captureSingleSub();const cleared=clearGlobalTiming();[playlist[index],playlist[index+delta]]=[playlist[index+delta],playlist[index]];refreshPlaylistTimeline(cleared)}
 function importStatus(text,state='busy'){
  const status=$('#audioImportStatus');status.hidden=false;status.textContent=text;status.dataset.state=state;status.setAttribute('aria-busy',String(state==='busy'));say(text);
 }
@@ -74,7 +74,7 @@ async function basicAudioEnvelope(decoded){
  const levels=normalize(values);return buildAudioEnvelope([levels,levels,levels],n);
 }
 async function addSongs(files){
- if(run||loading)return;
+ if(aiBusy()||run||loading)return;
  files=Array.from(files||[]);if(!files.length)return;
  const initial=playlist.length;captureSingleSub();loading=true;ready();let added=0,failures=[],basicUsed=false;let memory=playlist.reduce((n,t)=>n+audioBytes(t.buffer),0);
  importStatus('Đã nhận '+files.length+' file. Đang chuẩn bị đọc nhạc…');
@@ -112,10 +112,11 @@ function playlistSourceAt(offset){
  return{nodes,stop(){for(const src of nodes)try{src.stop()}catch{}},disconnect(){for(const src of nodes)try{src.disconnect()}catch{}}};
 }
 function initPlaylist(){
- $('#audioFile').onclick=e=>{if(run||loading)return;e.target.value='';try{prepareAudioImport()}catch(error){importStatus(error.message,'error')}};
+ $('#audioFile').onclick=e=>{if(aiBusy()||run||loading)return;e.target.value='';try{prepareAudioImport()}catch(error){importStatus(error.message,'error')}};
  $('#audioFile').onchange=e=>{const files=[...e.target.files];addSongs(files)};
  drop('#audioDrop',addSongs);
- $('#clearPlaylist').onclick=()=>{if(run||loading)return;playlist.length=0;clearGlobalTiming();refreshPlaylistTimeline();$('#audioImportStatus').hidden=true};
+ $('#clearPlaylist').onclick=()=>{if(aiBusy()||run||loading)return;playlist.length=0;clearGlobalTiming();refreshPlaylistTimeline();$('#audioImportStatus').hidden=true};
  $('#playlistTitles').oninput=()=>{playlistActive=-1;studioStatus();playlistNow(currentTime());redraw()};
  renderPlaylist();
 }
+
