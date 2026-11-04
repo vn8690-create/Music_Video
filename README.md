@@ -8,7 +8,7 @@ Sau khi bật GitHub Pages, địa chỉ dự kiến: **https://vn8690-create.gi
 
 Nếu chưa bật: vào **Settings → Pages → Build and deployment → Deploy from a branch → main → /(root) → Save**. Chờ GitHub triển khai. Repo có sẵn index.html và .nojekyll.
 
-Có thể tải cả repo về máy tính (giữ index.html, album.js, playlist.js và studio.css cùng thư mục) rồi mở index.html; để dùng trên iPhone nên mở trang HTTPS bằng Safari, Android bằng Chrome. Trình duyệt trong Facebook/Zalo có thể hạn chế chọn file, âm thanh hoặc tải xuống.
+Có thể tải cả repo về máy tính (giữ index.html, album.js, playlist.js, transitions.js và studio.css cùng thư mục) rồi mở index.html; để dùng trên iPhone nên mở trang HTTPS bằng Safari, Android bằng Chrome. Trình duyệt trong Facebook/Zalo có thể hạn chế chọn file, âm thanh hoặc tải xuống.
 
 ## Phối nhiều hiệu ứng
 
@@ -104,3 +104,12 @@ Xuất vẫn theo thời gian thực. Giữ tab mở; việc tạm giữ và ti�
 Vào **Hiệu ứng → Chọn một hoặc nhiều kiểu**, tick Hòa tan / Quét ngang / Trượt / Vòng tròn / Cắt thẳng. Chọn **Luân phiên** để dùng theo thứ tự các ô, hoặc **Ngẫu nhiên** để xáo từng lượt, tránh hai kiểu giống nhau liền nhau khi chọn từ hai kiểu trở lên. **Chọn tất cả** bật cả năm; bỏ bớt để phối theo ý. Luôn giữ ít nhất một kiểu được chọn.
 
 Mỗi lần đổi ảnh dùng một kiểu đã chọn. Lượt ngẫu nhiên được giữ ổn định khi tua, tạm dừng và xuất lại trong cùng phiên; bấm **Đảo lượt ngẫu nhiên** để đổi cách phối. Chuyển cảnh áp dụng cho cả bố cục Album và ảnh toàn màn hình, trên timeline chung của danh sách bài. Chỉ có một ảnh thì chọn nhiều kiểu không tạo thêm cảnh mới.
+
+
+## V5.3 — Mờ, lật, xoay và hòa trộn
+
+Hiện có **15 kiểu**: năm kiểu cơ bản, Mờ mềm, Zoom hòa tan, Zoom + mờ, Lật ngang, Lật dọc, Xoay nghiêng, Xoáy vòng, Đẩy lên, Hòa trộn sáng (screen), Hòa trộn tối (multiply). Chọn một hoặc nhiều ô để phối luân phiên/ngẫu nhiên. Bộ **Nhẹ nhàng** chọn hòa tan/mờ/zoom/xoay; bộ **Năng động** chọn zoom mờ/lật/xoáy/đẩy/hòa sáng.
+
+Chỉnh thời lượng 0,2–2,5 giây, nhịp chuyển mượt hoặc đều, và độ mạnh. Nếu đổi ảnh nhanh, thời lượng chuyển tự giới hạn ở 45% khoảng đổi ảnh để tránh chồng cảnh. Các lớp phổ nhạc/logo/đĩa và karaoke được vẽ sau phần chuyển ảnh, nên không bị lật hay làm mờ theo cảnh. Mẫu Album vẫn dùng được.
+
+Các kiểu lật là phép mô phỏng bằng canvas 2D, không phải dựng mô hình 3D. Thiết bị không có Canvas filter dùng cách thu nhỏ/phóng mịn để tạo mờ gần đúng. Khi xuất nhiều hiệu ứng nặng, chọn chất lượng phù hợp với thiết bị; đây vẫn là trình dựng video chạy theo thời gian thực, không phải toàn bộ tính năng CapCut.

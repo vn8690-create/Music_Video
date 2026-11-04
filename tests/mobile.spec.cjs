@@ -1,4 +1,23 @@
 const {test,expect}=require('@playwright/test');const path=require('node:path');
+test('advanced blur, flip, rotate and blend transitions paint distinct frames and export',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
+ await page.locator('#audioFile').setInputFiles(path.join(__dirname,'fixtures/tone.wav'));await page.waitForFunction(()=>!!env&&!loading);
+ await page.locator('#imageFiles').setInputFiles([path.join(__dirname,'fixtures/cover.png'),path.join(__dirname,'fixtures/logo.png')]);await page.waitForFunction(()=>imgs.length===2);
+ await page.locator('[data-tab=effects]').click();await page.locator('#clearEffects').click();await page.locator('#gap').fill('2');await page.locator('#beatCuts').uncheck();await page.locator('#transitionDuration').fill('1.0');
+ const checks=await page.evaluate(()=>{
+  const captures={};for(const input of document.querySelectorAll('[data-transition]')){
+   const key=input.dataset.transition;document.querySelectorAll('[data-transition]').forEach(item=>item.checked=item.dataset.transition===key);drawFrame(2.35);captures[key]=cv.toDataURL();
+  }
+  transitionUI();return{count:Object.keys(captures).length,blur:captures.blur!==captures.fade,flip:captures['flip-x']!==captures['flip-y'],rotate:captures.rotate!==captures.cut,blend:captures['blend-light']!==captures['blend-dark']};
+ });expect(checks).toEqual({count:15,blur:true,flip:true,rotate:true,blend:true});
+ await page.locator('#gentleTransitions').click();expect(await page.locator('[data-transition]:checked').count()).toBe(4);
+ await page.locator('#dynamicTransitions').click();expect(await page.locator('[data-transition]:checked').count()).toBe(6);
+ await page.evaluate(()=>{document.querySelectorAll('[data-transition]').forEach(item=>item.checked=item.dataset.transition==='zoom-blur');transitionUI()});
+ await page.locator('#transitionPower').fill('85');await page.locator('#transitionEase').selectOption('smooth');
+ await page.locator('[data-tab=media]').click();for(const aspect of ['9:16','1:1','16:9']){await page.locator('#aspect').selectOption(aspect);await page.evaluate(()=>drawFrame(2.35));expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true)}
+ if(await page.evaluate(()=>canRecord())){await page.locator('#record').click();await page.waitForFunction(()=>!!document.querySelector('#out video'),{timeout:20000});await expect(page.locator('#out a')).toBeVisible()}
+ expect(errors).toEqual([]);
+});
 test('multiple transitions cycle, stay stable when seeking and export',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
  await page.locator('[data-tab=effects]').click();await expect(page.locator('[data-transition=fade]')).toBeDisabled();
@@ -8,7 +27,7 @@ test('multiple transitions cycle, stay stable when seeking and export',async({pa
  const sequence=await page.evaluate(()=>Array.from({length:12},(_,i)=>transitionAt(i+1)));
  expect(sequence.every(x=>['fade','wipe','iris'].includes(x))).toBe(true);expect(sequence.every((x,i)=>!i||x!==sequence[i-1])).toBe(true);
  expect(await page.evaluate(()=>[transitionAt(9),transitionAt(2),transitionAt(9)])).toEqual([sequence[8],sequence[1],sequence[8]]);
- await expect(page.locator('#shuffleTransitions')).toBeEnabled();await page.locator('#allTransitions').click();expect(await page.locator('[data-transition]:checked').count()).toBe(5);
+ await expect(page.locator('#shuffleTransitions')).toBeEnabled();await page.locator('#allTransitions').click();expect(await page.locator('[data-transition]:checked').count()).toBe(15);
  await page.locator('[data-tab=media]').click();await page.locator('#audioFile').setInputFiles(path.join(__dirname,'fixtures/tone.wav'));await page.waitForFunction(()=>!!env&&!loading);
  await page.locator('#imageFiles').setInputFiles([path.join(__dirname,'fixtures/cover.png'),path.join(__dirname,'fixtures/logo.png')]);await page.waitForFunction(()=>imgs.length===2);
  await page.locator('[data-tab=effects]').click();await page.locator('#gap').fill('2');await page.locator('#beatCuts').uncheck();expect(await page.evaluate(()=>switches.length)).toBeGreaterThan(1);
