@@ -141,3 +141,10 @@ Nhận diện dùng `Xenova/whisper-tiny` đa ngôn ngữ, q8, WASM một luồn
 Lời AI gốc có mốc từ do model dự đoán. Khi dán lời chuẩn hoặc sửa lời/mốc thủ công, app dùng mốc câu và tô từ ước lượng; không coi đối chiếu văn bản là forced alignment chính xác. Nhạc nền, luyến láy, đoạn không hát và ngôn ngữ đều có thể gây sai hoặc lời bịa. Hãy nghe lại. Bản này không tách vocal, không bảo đảm khớp mọi bài và không cam kết chạy nền trên iOS. Hiệu năng thực tế cần thử trên điện thoại của bạn.
 
 Kiểm tra và giới hạn: xem [VALIDATION_AI.md](VALIDATION_AI.md).
+
+## V5.5 — Ảnh và video trong cùng MV
+Trong Tư liệu, chọn **Thêm ảnh / video**. Mỗi clip có mốc Từ–Đến, thời lượng hiện trong MV, lặp đoạn cắt và tốc độ 0,25×–4×. Đổi tốc độ tự điều chỉnh thời lượng cảnh theo tỷ lệ; vẫn có thể nhập lại thời lượng. Tắt lặp sẽ giữ khung hình cuối của đoạn cắt. Tiếng clip luôn tắt; nhạc và karaoke dùng đồng hồ bài hát.
+
+Có thể sắp xếp ảnh xen clip, dùng các chuyển cảnh, logo, đĩa và karaoke hiện có. Ưu tiên MP4 H.264. Codec MOV/HEVC/WebM tùy trình duyệt. Giới hạn 6 clip trên điện thoại, 12 trên máy tính; canvas nền tối đa cạnh 1280 để giảm bộ nhớ. Slow motion dùng khung hình gốc, chưa có nội suy AI hoặc đường cong tốc độ trong cùng clip. Giữ trang hiện khi xuất.
+
+Kiểm tra: 8 unit tests và 16 browser tests chạy đạt trên Chromium với viewport Android, gồm video MP4 thật, cắt/loop/hold, tốc độ 0,5×, reorder/remove, pause/resume và xuất. Chưa xác nhận trên iPhone vật lý.

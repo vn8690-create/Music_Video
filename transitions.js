@@ -16,7 +16,7 @@ function transitionLayer(texture,{alpha=1,x=0,y=0,sx=1,sy=sx,angle=0,blur=0,blen
  cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality='high';cx.drawImage(source,-cv.width/2,-cv.height/2,cv.width,cv.height);cx.restore();
 }
 function paintImageTransition(index,frame,start,rawProgress,amp,time,type){
- if(index===0||rawProgress>=1||type==='cut'){drawScene(imgs[index%imgs.length].image,index,(frame-start)/FPS,amp,time);return}
+ if(imgs.length===1||index===0||rawProgress>=1||type==='cut'){drawScene(imgs[index%imgs.length].image,index,(frame-start)/FPS,amp,time);return}
  const old=snapshotScene(0,imgs[(index-1)%imgs.length].image,index-1,(frame-switches[index-1])/FPS,amp,time);
  const next=snapshotScene(1,imgs[index%imgs.length].image,index,(frame-start)/FPS,amp,time);
  const p=$('#transitionEase').value==='linear'?rawProgress:rawProgress*rawProgress*(3-2*rawProgress),q=1-p,peak=Math.sin(p*Math.PI),power=number('#transitionPower',70,20,100)/100,W=cv.width,H=cv.height,blur=Math.min(W,H)*.025*power*peak;
@@ -43,3 +43,4 @@ function paintImageTransition(index,frame,start,rawProgress,amp,time,type){
  else{transitionLayer(old);transitionLayer(next,{alpha:p})}
  cx.restore();
 }
+

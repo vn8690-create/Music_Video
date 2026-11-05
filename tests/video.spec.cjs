@@ -1,0 +1,49 @@
+const {test,expect}=require('@playwright/test');
+const fs=require('node:fs'),path=require('node:path');
+const fixture=name=>path.join(__dirname,'fixtures',name);
+const clip={name:'clip.mp4',mimeType:'video/mp4',buffer:Buffer.from(fs.readFileSync(fixture('clip.mp4.base64'),'utf8'),'base64')};
+test.use({serviceWorkers:'block'});
+test('mixed clips trim, loop, hold, reorder and export with muted native audio',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
+ await page.locator('#audioFile').setInputFiles(fixture('tone.wav'));await page.waitForFunction(()=>env&&!loading);
+ await page.locator('#imageFiles').setInputFiles(clip);await page.waitForFunction(()=>imgs.length===1&&!loading);
+ await page.locator('#imageFiles').setInputFiles(fixture('cover.png'));await page.waitForFunction(()=>imgs.length===2&&!loading);
+ await expect(page.locator('#thumbs .media-card')).toHaveCount(2);
+ await page.locator('[data-media-field=trimStart]').fill('.3');await page.locator('[data-media-field=trimStart]').blur();
+ await page.locator('[data-media-field=trimEnd]').fill('1.2');await page.locator('[data-media-field=trimEnd]').blur();
+ await page.locator('[data-media-field=sceneDuration]').fill('3');await page.locator('[data-media-field=sceneDuration]').blur();
+ await page.locator('[data-media-field=loop]').uncheck();
+ await page.evaluate(async()=>{position=2;await prepareBackgroundMedia(position);drawFrame(position)});
+ expect(await page.evaluate(()=>imgs[0].video.currentTime)).toBeCloseTo(1.165,1);
+ expect(await page.evaluate(()=>imgs[0].video.muted&&imgs[0].video.volume===0)).toBe(true);
+ await page.locator('[data-media-field=speed]').selectOption('0.5');
+ expect(await page.evaluate(()=>imgs[0].sceneDuration)).toBe(6);
+ await page.evaluate(async()=>{position=1;await prepareBackgroundMedia(position);drawFrame(position)});
+ expect(await page.evaluate(()=>imgs[0].video.currentTime)).toBeCloseTo(.8,1);
+ expect(await page.evaluate(()=>imgs[0].video.playbackRate)).toBe(.5);
+ await page.locator('[data-media-field=speed]').selectOption('1');
+ await page.locator('[data-media-field=loop]').check();
+ await page.evaluate(async()=>{position=1.1;await prepareBackgroundMedia(position);drawFrame(position)});
+ expect(await page.evaluate(()=>imgs[0].video.currentTime)).toBeCloseTo(.5,1);
+ await page.getByRole('button',{name:'Đưa tư liệu 1 sang phải',exact:true}).click();expect(await page.evaluate(()=>imgs[1].kind)).toBe('video');
+ await page.getByRole('button',{name:'Đưa tư liệu 2 sang trái',exact:true}).click();
+ await page.evaluate(()=>position=0);await page.locator('#play').click();await page.waitForFunction(()=>run&&currentTime()>.3);
+ await expect(page.locator('[data-media-field=trimStart]')).toBeDisabled();
+ await page.locator('#play').click();expect(await page.evaluate(()=>imgs[0].video.paused)).toBe(true);
+ await page.locator('#stop').click();
+ if(await page.evaluate(()=>canRecord())){
+  await page.locator('#record').click();await page.waitForFunction(()=>run?.mode==='record'&&currentTime()>.3);
+  await page.evaluate(()=>pauseExport('manual'));expect(await page.evaluate(()=>imgs[0].video.paused)).toBe(true);
+  await page.evaluate(()=>resumeExport(true));await page.waitForFunction(()=>!!document.querySelector('#out video'),null,{timeout:25000});
+  expect(await page.locator('#out a').getAttribute('download')).toMatch(/video-karaoke/);
+ }
+ expect(errors).toEqual([]);
+});
+test('invalid clip preserves images and removing clip releases its decoder',async({page})=>{
+ await page.goto('/');await page.locator('#imageFiles').setInputFiles(fixture('cover.png'));await page.waitForFunction(()=>imgs.length===1&&!loading);
+ await page.locator('#imageFiles').setInputFiles({name:'bad.mp4',mimeType:'video/mp4',buffer:Buffer.from('bad')});await page.waitForFunction(()=>!loading);
+ await expect(page.locator('#mediaStatus')).toContainText('bad.mp4');expect(await page.evaluate(()=>imgs.length)).toBe(1);
+ await page.locator('#imageFiles').setInputFiles(clip);await page.waitForFunction(()=>imgs.length===2&&!loading);
+ await page.getByRole('button',{name:'Xóa tư liệu 2',exact:true}).click();await expect(page.locator('#videoDecoders video')).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});

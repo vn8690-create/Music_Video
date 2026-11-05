@@ -15,3 +15,17 @@
 
 
 .ai-panel{border:1px solid #466856;border-radius:10px;background:#14231e;padding:12px;margin:14px 0}.ai-panel h3{margin:0;font-size:15px}.ai-panel h4{overflow-wrap:anywhere}.ai-panel progress{width:100%;accent-color:var(--mint);margin-top:12px}#aiStatus{color:var(--mint);font-size:12px;overflow-wrap:anywhere}#aiReview{max-height:440px;overflow:auto;margin-top:10px;overscroll-behavior:contain}.ai-cue{border:1px solid var(--line);border-radius:8px;background:#111923;padding:10px;margin:8px 0}.ai-cue strong{font-size:11px;color:var(--mint)}.ai-cue textarea{min-height:65px}.ai-panel .buttons{flex-wrap:wrap}.ai-panel .buttons button{min-width:100px}.ai-panel select{min-width:0;width:100%}.ai-panel details{margin-top:12px}
+
+/* Mixed photo and clip editor */
+#thumbs{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;overflow:visible}
+#thumbs .media-card{width:auto;min-width:0;padding:10px;border:1px solid var(--border,#303744);border-radius:12px;background:#171e28}
+#thumbs .media-card img{width:100%;height:94px;object-fit:cover;border-radius:8px}
+#thumbs .media-card strong{display:block;font-size:12px;overflow-wrap:anywhere;margin:8px 0}
+#thumbs .media-card .buttons{display:flex;gap:6px}
+#thumbs .media-card button{position:static;width:auto;min-width:36px}
+#thumbs .media-card .grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+#thumbs .media-card .field:last-child{grid-column:1/-1}
+#thumbs input[type=number]{width:100%;min-width:0}
+.media-loop{display:flex;align-items:center;gap:7px;font-size:13px;margin-top:10px}
+#videoDecoders{position:fixed;left:-4px;bottom:0;width:2px;height:2px;overflow:hidden;pointer-events:none;opacity:.001}
+#videoDecoders video{width:2px;height:2px}
