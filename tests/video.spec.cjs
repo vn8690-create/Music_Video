@@ -47,3 +47,38 @@ test('invalid clip preserves images and removing clip releases its decoder',asyn
  await page.getByRole('button',{name:'Xóa tư liệu 2',exact:true}).click();await expect(page.locator('#videoDecoders video')).toHaveCount(0);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
+test('speed curve uses integrated time when seeking, holds trim and keeps music timing',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
+ await page.locator('#audioFile').setInputFiles(fixture('tone.wav'));await page.waitForFunction(()=>env&&!loading);
+ await page.locator('#imageFiles').setInputFiles(clip);await page.waitForFunction(()=>imgs.length===1&&!loading);
+ const songDuration=await page.evaluate(()=>buf.duration);
+ await page.locator('[data-media-field=speedMode]').selectOption('fast-slow');
+ await expect(page.locator('[data-speed-point]')).toHaveCount(5);
+ await expect(page.locator('.speed-curve-graph')).toBeVisible();
+ const result=await page.evaluate(async()=>{
+  const item=imgs[0],duration=item.sceneDuration;
+  const samples=[];
+  for(const fraction of [.25,.6,.1,.25]){
+   position=duration*fraction;await prepareBackgroundMedia(position);drawFrame(position);
+   samples.push({actual:item.video.currentTime,expected:clipTime(item,position),rate:item.video.playbackRate,targetRate:SpeedCurve.at(item,position)});
+  }
+  return {samples,span:SpeedCurve.elapsed(item,duration),trim:item.trimEnd-item.trimStart};
+ });
+ expect(result.span).toBeCloseTo(result.trim,4);
+ for(const s of result.samples){expect(s.actual).toBeCloseTo(s.expected,1);expect(s.rate).toBeCloseTo(s.targetRate,2)}
+ expect(result.samples[0].actual).toBeCloseTo(result.samples[3].actual,2);
+ await page.locator('[data-speed-point="2"]').fill('0.5');
+ await expect(page.locator('[data-media-field=speedMode]')).toHaveValue('custom');
+ expect(await page.evaluate(()=>imgs[0].speedPoints[2])).toBe(.5);
+ expect(await page.evaluate(()=>buf.duration)).toBe(songDuration);
+ await page.locator('[data-media-field=loop]').uncheck();
+ await page.locator('[data-media-field=sceneDuration]').fill('8');await page.locator('[data-media-field=sceneDuration]').blur();
+ await page.evaluate(async()=>{position=7;await prepareBackgroundMedia(position);drawFrame(position)});
+ expect(await page.evaluate(()=>imgs[0].video.currentTime)).toBeCloseTo(await page.evaluate(()=>imgs[0].trimEnd-.035),1);
+ await page.evaluate(()=>position=0);await page.locator('#play').click();await page.waitForFunction(()=>run&&currentTime()>.2);
+ await expect(page.locator('[data-speed-point="2"]')).toBeDisabled();
+ await page.locator('#play').click();expect(await page.evaluate(()=>imgs[0].video.paused)).toBe(true);
+ await page.locator('#play').click();await page.waitForFunction(()=>run&&!run.paused);await page.locator('#stop').click();
+ if(await page.evaluate(()=>canRecord())){await page.locator('#record').click();await page.waitForFunction(()=>!!document.querySelector('#out video'),null,{timeout:25000})}
+ expect(errors).toEqual([]);
+});

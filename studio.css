@@ -29,3 +29,10 @@
 .media-loop{display:flex;align-items:center;gap:7px;font-size:13px;margin-top:10px}
 #videoDecoders{position:fixed;left:-4px;bottom:0;width:2px;height:2px;overflow:hidden;pointer-events:none;opacity:.001}
 #videoDecoders video{width:2px;height:2px}
+
+.speed-curve-panel{padding:9px;border:1px solid #35434b;border-radius:10px;background:#111a22;margin-top:10px}
+.speed-curve-graph{display:block;width:100%;height:auto;max-height:160px}
+.speed-curve-panel .hint{font-size:11px;line-height:1.5;margin:5px 0 10px}
+.speed-point{display:grid;grid-template-columns:32px minmax(0,1fr) 44px;align-items:center;gap:6px;min-height:40px;font-size:11px}
+#thumbs .speed-point input{min-width:0;width:100%;padding:0;accent-color:#a5efd4;touch-action:pan-y}
+.speed-point output{text-align:right;font-variant-numeric:tabular-nums}

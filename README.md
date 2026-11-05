@@ -145,6 +145,11 @@ Kiểm tra và giới hạn: xem [VALIDATION_AI.md](VALIDATION_AI.md).
 ## V5.5 — Ảnh và video trong cùng MV
 Trong Tư liệu, chọn **Thêm ảnh / video**. Mỗi clip có mốc Từ–Đến, thời lượng hiện trong MV, lặp đoạn cắt và tốc độ 0,25×–4×. Đổi tốc độ tự điều chỉnh thời lượng cảnh theo tỷ lệ; vẫn có thể nhập lại thời lượng. Tắt lặp sẽ giữ khung hình cuối của đoạn cắt. Tiếng clip luôn tắt; nhạc và karaoke dùng đồng hồ bài hát.
 
-Có thể sắp xếp ảnh xen clip, dùng các chuyển cảnh, logo, đĩa và karaoke hiện có. Ưu tiên MP4 H.264. Codec MOV/HEVC/WebM tùy trình duyệt. Giới hạn 6 clip trên điện thoại, 12 trên máy tính; canvas nền tối đa cạnh 1280 để giảm bộ nhớ. Slow motion dùng khung hình gốc, chưa có nội suy AI hoặc đường cong tốc độ trong cùng clip. Giữ trang hiện khi xuất.
+Có thể sắp xếp ảnh xen clip, dùng các chuyển cảnh, logo, đĩa và karaoke hiện có. Ưu tiên MP4 H.264. Codec MOV/HEVC/WebM tùy trình duyệt. Giới hạn 6 clip trên điện thoại, 12 trên máy tính; canvas nền tối đa cạnh 1280 để giảm bộ nhớ. Slow motion dùng khung hình gốc, chưa có nội suy AI (đường cong tốc độ có từ V5.6). Giữ trang hiện khi xuất.
 
 Kiểm tra: 8 unit tests và 16 browser tests chạy đạt trên Chromium với viewport Android, gồm video MP4 thật, cắt/loop/hold, tốc độ 0,5×, reorder/remove, pause/resume và xuất. Chưa xác nhận trên iPhone vật lý.
+
+## V5.6 — Đường cong tốc độ
+Chọn clip → Đường cong tốc độ → Tăng nhanh → Slow, Slow → Tăng nhanh, Nhanh → Slow → Nhanh hoặc Tự chỉnh. Năm mốc 0/25/50/75/100% của thời lượng cảnh chỉnh được từ 0,25× đến 4×; biểu đồ nối mượt giữa các mốc. Chọn Tốc độ cố định để trở lại chế độ cũ.
+Thời lượng cảnh tự đổi theo tốc độ trung bình để giữ nguyên lượng hình gốc đã đi qua. Có thể nhập lại thời lượng để lặp hoặc giữ hình cuối. Thời gian nguồn được tính từ tích phân đường cong, nên tua/tạm dừng không tích lũy sai số. Nhạc và sub không đổi tốc độ.
+Đã chạy đạt 11 unit tests. Có browser regression cho preset, sửa mốc, tua, hold, pause/resume và xuất; kiểm tra trình duyệt được giao cho GitHub Actions do sandbox cục bộ chặn khởi chạy Chromium.

@@ -2,7 +2,7 @@
 let mediaSequence=0,mediaPreparing=false;
 function isVideoFile(file){return(file.type||'').startsWith('video/')||/\.(mp4|mov|m4v|webm)$/i.test(file.name)}
 function mediaDuration(item){return item.kind==='video'?item.sceneDuration:number('#gap',8,2,120)}
-function clipTime(item,age){const span=item.trimEnd-item.trimStart,safeEnd=Math.max(item.trimStart,item.trimEnd-.035);return Math.min(safeEnd,item.trimStart+(item.loop?(Math.max(0,age)*(item.speed||1))%span:Math.min(span,Math.max(0,age)*(item.speed||1))))}
+function clipTime(item,age){const span=item.trimEnd-item.trimStart,safeEnd=Math.max(item.trimStart,item.trimEnd-.035),elapsed=SpeedCurve.elapsed(item,age);return Math.min(safeEnd,item.trimStart+(item.loop?elapsed%span:Math.min(span,elapsed)))}
 function transitionSeconds(index){const current=((switches[index+1]??env?.n??FPS*8)-switches[index])/FPS,previous=index?(switches[index]-switches[index-1])/FPS:current;return Math.min(number('#transitionDuration',.7,.2,2.5),Math.max(.02,Math.min(current,previous)*.45))}
 function mediaStatus(message){$('#mediaStatus').textContent=message;say(message)}
 function mediaEvent(video,event,action,timeout=20000){return new Promise((resolve,reject)=>{let timer;const done=error=>{clearTimeout(timer);video.removeEventListener(event,ok);video.removeEventListener('error',bad);error?reject(error):resolve()};const ok=()=>done(),bad=()=>done(Error('Không đọc được codec video. Thử MP4 H.264.'));video.addEventListener(event,ok,{once:true});video.addEventListener('error',bad,{once:true});timer=setTimeout(()=>done(Error('Đọc video quá lâu. Hãy tải clip về máy và thử clip ngắn hơn.')),timeout);try{action()}catch(e){done(e)}})}
@@ -36,13 +36,40 @@ function renderMedia(){
   if(item.kind==='video'){
    const grid=document.createElement('div');grid.className='grid';
    for(const[key,label]of[['trimStart','Từ giây'],['trimEnd','Đến giây'],['sceneDuration','Hiện trong MV (giây)']]){const field=document.createElement('label');field.className='field';field.textContent=label;const input=document.createElement('input');input.type='number';input.min=key==='sceneDuration'?'.1':'0';input.max=String(key==='sceneDuration'?600:item.duration);input.step='.1';input.value=item[key].toFixed(2);input.dataset.mediaField=key;input.onchange=()=>{if(run||loading||starting||aiBusy()){input.value=item[key];return}const value=Number(input.value),next={...item,[key]:value};if(input.value===''||!Number.isFinite(value)||next.trimStart<0||next.trimEnd>item.duration||next.trimEnd-next.trimStart<.05||next.sceneDuration<.1||next.sceneDuration>600){input.value=item[key].toFixed(2);mediaStatus('Mốc cắt phải nằm trong clip; thời lượng hiện từ 0,1 đến 600 giây.');return}item[key]=value;item.lastScene=-1;pauseBackgroundMedia();plan();redraw();mediaStatus('Đã cập nhật đoạn clip '+item.name)};field.append(input);grid.append(field)}card.append(grid);
-   const speedLabel=document.createElement('label');speedLabel.className='field';speedLabel.textContent='Tốc độ clip';const speed=document.createElement('select');speed.dataset.mediaField='speed';
-   for(const rate of [.25,.5,.75,1,1.5,2,4]){const option=document.createElement('option');option.value=rate;option.textContent=rate+'×'+(rate<1?' · Slow':rate>1?' · Nhanh':' · Bình thường');speed.append(option)}speed.value=item.speed||1;
-   speed.onchange=()=>{if(run||loading||starting||aiBusy())return;const previous=item.speed||1;item.speed=Number(speed.value);item.sceneDuration=Math.min(600,Math.max(.1,item.sceneDuration*previous/item.speed));item.video.playbackRate=item.speed;item.lastScene=-1;pauseBackgroundMedia();plan();renderMedia();redraw();mediaStatus('Tốc độ '+item.speed+'× · chỉ đổi hình, giữ nguyên nhạc và sub.')};speedLabel.append(speed);card.append(speedLabel);
-
+   renderSpeedControls(card,item);
    const check=document.createElement('label');check.className='media-loop';const input=document.createElement('input');input.type='checkbox';input.checked=item.loop;input.dataset.mediaField='loop';input.onchange=()=>{if(run||loading||starting||aiBusy())return;item.loop=input.checked;item.lastScene=-1;redraw()};check.append(input,document.createTextNode('Lặp đoạn cắt'));card.append(check);
   }box.append(card);
  });syncMediaControls();
+}
+function renderSpeedControls(card,item){
+ const busy=()=>run||loading||starting||aiBusy();
+ const field=(title,control)=>{const label=document.createElement('label');label.className='field';label.append(document.createTextNode(title),control);card.append(label);return label};
+ const mode=document.createElement('select');mode.dataset.mediaField='speedMode';
+ for(const[value,text]of [['constant','Tốc độ cố định'],...Object.entries(SpeedCurve.presets).map(([k,v])=>[k,v.label])]){const option=document.createElement('option');option.value=value;option.textContent=text;mode.append(option)}
+ mode.value=item.speedMode||'constant';field('Đường cong tốc độ',mode);
+ const change=(mutate,rebuild=true)=>{if(busy())return;const previous=SpeedCurve.mean(item);mutate();item.sceneDuration=Math.min(600,Math.max(.1,item.sceneDuration*previous/SpeedCurve.mean(item)));item.lastScene=-1;pauseBackgroundMedia();plan();if(rebuild)renderMedia();else card.querySelector('[data-media-field=sceneDuration]').value=item.sceneDuration.toFixed(2);redraw()};
+ mode.onchange=()=>change(()=>{item.speedMode=mode.value;if(mode.value!=='constant')item.speedPoints=[...SpeedCurve.presets[mode.value].points]});
+ if(mode.value==='constant'){
+  const speed=document.createElement('select');speed.dataset.mediaField='speed';
+  for(const rate of [.25,.5,.75,1,1.5,2,4]){const option=document.createElement('option');option.value=rate;option.textContent=rate+'×'+(rate<1?' · Slow':rate>1?' · Nhanh':' · Bình thường');speed.append(option)}speed.value=item.speed||1;
+  speed.onchange=()=>change(()=>{item.speed=Number(speed.value)});field('Tốc độ clip',speed);return;
+ }
+ const panel=document.createElement('div');panel.className='speed-curve-panel';
+ const ns='http://www.w3.org/2000/svg',graph=document.createElementNS(ns,'svg');graph.setAttribute('viewBox','0 0 280 110');graph.setAttribute('role','img');graph.classList.add('speed-curve-graph');
+ const chart=()=>{
+  const points=SpeedCurve.pointsFor(item),y=rate=>90-(rate-.25)/3.75*72;
+  graph.setAttribute('aria-label','Đường cong tốc độ: '+points.map((v,i)=>i*25+'%: '+v.toFixed(2)+' lần').join(', '));
+  graph.innerHTML='<path d="M18 18V90H262" stroke="#53616e" fill="none"/><path d="M18 '+y(1)+'H262" stroke="#53616e" stroke-dasharray="3 4" fill="none"/>';
+  const path=document.createElementNS(ns,'path');path.setAttribute('d',Array.from({length:81},(_,i)=>(i?'L':'M')+(18+i/80*244).toFixed(2)+' '+y(SpeedCurve.rate(points,i/80)).toFixed(2)).join(' '));path.setAttribute('fill','none');path.setAttribute('stroke','#a5efd4');path.setAttribute('stroke-width','2.5');graph.append(path);
+  points.forEach((v,i)=>{const dot=document.createElementNS(ns,'circle');dot.setAttribute('cx',18+i*61);dot.setAttribute('cy',y(v));dot.setAttribute('r','4');dot.setAttribute('fill','#f2bc70');graph.append(dot)});
+ };
+ chart();panel.append(graph);
+ const caption=document.createElement('p');caption.className='hint';caption.textContent='Đầu clip → cuối clip · cao = nhanh, thấp = slow';panel.append(caption);
+ SpeedCurve.pointsFor(item).forEach((value,i)=>{
+  const row=document.createElement('label');row.className='speed-point';const label=document.createElement('span');label.textContent=i*25+'%';const slider=document.createElement('input');slider.type='range';slider.min='.25';slider.max='4';slider.step='.05';slider.value=value;slider.dataset.speedPoint=i;slider.setAttribute('aria-label','Tốc độ tại '+i*25+'% clip');const output=document.createElement('output');output.textContent=value.toFixed(2)+'×';
+  slider.oninput=()=>{if(busy())return;change(()=>{item.speedMode='custom';mode.value='custom';item.speedPoints[i]=Number(slider.value)},false);output.textContent=Number(slider.value).toFixed(2)+'×';chart()};row.append(label,slider,output);panel.append(row);
+ });
+ const note=document.createElement('p');note.className='hint';note.textContent='Các mốc theo % thời lượng cảnh. Chuyển tốc độ mượt; thời lượng tự điều chỉnh, nhạc và sub giữ nguyên.';panel.append(note);card.append(panel);
 }
 function syncMediaControls(){for(const input of document.querySelectorAll('#thumbs button,#thumbs input,#thumbs select'))input.disabled=!!run||loading||starting||aiBusy()||input.dataset.edge==='true'}
 function planMedia(){
@@ -57,8 +84,8 @@ function playMedia(item){if(item.playPending||item.failed||!item.video.paused)re
 function syncBackgroundMedia(time){
  if(mediaPreparing)return;const active=activeMedia(time),activeItems=new Set(active.map(e=>e.item));
  for(const item of imgs)if(item.kind==='video'&&!activeItems.has(item))item.video.pause();
- for(const entry of active){const item=entry.item;if(item.kind!=='video'||item.failed)continue;const v=item.video,target=clipTime(item,entry.age),hold=!item.loop&&entry.age*(item.speed||1)>=item.trimEnd-item.trimStart;
-  v.muted=true;v.volume=0;v.playbackRate=item.speed||1;
+ for(const entry of active){const item=entry.item;if(item.kind!=='video'||item.failed)continue;const v=item.video,target=clipTime(item,entry.age),hold=!item.loop&&SpeedCurve.elapsed(item,entry.age)>=item.trimEnd-item.trimStart;
+  v.muted=true;v.volume=0;const rate=SpeedCurve.at(item,entry.age);if(Math.abs(v.playbackRate-rate)>.005)v.playbackRate=rate;
   if(!v.seeking&&(item.lastScene!==entry.scene||Math.abs(v.currentTime-target)>(entry.playing?.2:.035))){item.lastScene=entry.scene;v.currentTime=target}
   if(entry.playing&&!hold)playMedia(item);else v.pause();captureMedia(item);
  }
@@ -68,7 +95,7 @@ function syncBackgroundMedia(time){
 function pauseBackgroundMedia(){for(const item of imgs)if(item.kind==='video')item.video.pause()}
 async function prepareBackgroundMedia(time){
  const entries=activeMedia(time).filter(e=>e.item.kind==='video');if(!entries.length)return;
- mediaPreparing=true;try{pauseBackgroundMedia();for(const entry of entries){const item=entry.item;item.failed=false;item.video.playbackRate=item.speed||1;await seekMedia(item,clipTime(item,entry.age));item.lastScene=entry.scene;if(entry===entries[0]){await item.video.play();item.video.pause();captureMedia(item)}}}finally{mediaPreparing=false}
+ mediaPreparing=true;try{pauseBackgroundMedia();for(const entry of entries){const item=entry.item;item.failed=false;item.video.playbackRate=SpeedCurve.at(item,entry.age);await seekMedia(item,clipTime(item,entry.age));item.lastScene=entry.scene;if(entry===entries[0]){await item.video.play();item.video.pause();captureMedia(item)}}}finally{mediaPreparing=false}
 }
 function initMedia(){
  $('#imageFiles').onchange=async e=>{const files=[...e.target.files];await addMedia(files);e.target.value=''};
