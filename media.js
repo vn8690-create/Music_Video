@@ -7,15 +7,22 @@ function transitionSeconds(index){const current=((switches[index+1]??env?.n??FPS
 function mediaStatus(message){$('#mediaStatus').textContent=message;say(message)}
 function captureMedia(item){if(!item.attached||item.video.readyState<2||item.video.seeking)return;item.image.getContext('2d').drawImage(item.video,0,0,item.image.width,item.image.height);item.cachedTime=item.video.currentTime}
 function releaseMediaDecoder(item){
- if(!item.video||!item.attached)return;item.decodeController?.abort();item.attached=false;item.video.pause();item.video.removeAttribute('src');item.video.load();item.lastScene=-1;
+ if(!item.video||!item.attached)return;item.decodeController?.abort();item.attached=false;const video=item.video;video.pause();video.removeAttribute('src');video.load();video.remove();item.lastScene=-1;item.playPending=false;
+}
+function createMediaDecoder(item){
+ const video=document.createElement('video');video.muted=true;video.defaultMuted=true;video.volume=0;video.playsInline=true;video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.preload='metadata';video.setAttribute('aria-hidden','true');$('#videoDecoders').append(video);item.video=video;
+ video.addEventListener('seeked',()=>{if(item.video!==video||!item.attached)return;captureMedia(item);if(!mediaPreparing&&!loading&&(!run||run.paused))redraw()});
+ video.addEventListener('error',()=>{if(item.video===video&&item.attached&&imgs.includes(item))mediaFailure(item,'Không đọc tiếp được clip')});
+ return video;
 }
 async function attachMedia(item,signal){
- if(item.attached&&item.video.readyState>=1)return;
+ if(item.attached&&item.video?.readyState>=1)return;
  if(item.attachPending)return item.attachPending;
  const controller=new AbortController();item.decodeController=controller;
+ const video=item.attached?item.video:createMediaDecoder(item);
  const cancel=()=>controller.abort();signal?.addEventListener('abort',cancel,{once:true});if(signal?.aborted)cancel();
- const operation=VideoLoader.wait(item.video,()=>item.video.readyState>=1&&Number.isFinite(item.video.duration)&&item.video.videoWidth>0,['loadedmetadata','loadeddata','canplay'],()=>{
-  item.attached=true;item.video.preload='metadata';item.video.src=item.url;item.video.load();
+ const operation=VideoLoader.wait(video,()=>video.readyState>=1&&Number.isFinite(video.duration)&&video.videoWidth>0,['loadedmetadata','loadeddata','canplay'],()=>{
+  item.attached=true;video.preload='metadata';video.src=item.url;video.load();
  },{signal:controller.signal,timeout:60000});
  item.attachPending=operation;
  try{await operation}finally{signal?.removeEventListener('abort',cancel);if(item.attachPending===operation)item.attachPending=null}
@@ -24,21 +31,19 @@ async function seekMedia(item,time,signal){
  await attachMedia(item,signal);const video=item.video;
  await VideoLoader.wait(video,()=>!video.seeking&&video.readyState>=2&&Math.abs(video.currentTime-time)<.05,['loadeddata','canplay','seeked','timeupdate'],()=>{
   if(video.readyState<2||Math.abs(video.currentTime-time)>=.025)video.currentTime=time;
- },{signal:signal||item.decodeController?.signal,timeout:30000});captureMedia(item);
+ },{signal:signal||item.decodeController?.signal,timeout:30000});if(item.video!==video||!item.attached)throw new DOMException('Đã đổi cảnh.','AbortError');captureMedia(item);
 }
 function disposeMedia(item){if(item.video){releaseMediaDecoder(item);item.video.remove()}else item.image.close?.();URL.revokeObjectURL(item.url)}
 async function openVideo(file,signal){
- const url=URL.createObjectURL(file),video=document.createElement('video');video.muted=true;video.defaultMuted=true;video.volume=0;video.playsInline=true;video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.preload='metadata';video.setAttribute('aria-hidden','true');$('#videoDecoders').append(video);
- const item={id:++mediaSequence,kind:'video',name:file.name,url,video,image:document.createElement('canvas'),loop:true,speed:1,trimStart:0,lastScene:-1,failed:false,attached:false,cachedTime:0};
+ const url=URL.createObjectURL(file);
+ const item={id:++mediaSequence,kind:'video',name:file.name,url,video:null,image:document.createElement('canvas'),loop:true,speed:1,trimStart:0,lastScene:-1,failed:false,attached:false,cachedTime:0};
  try{
-  await attachMedia(item,signal);if(video.duration<=.05)throw Error('Video chưa có thời lượng hợp lệ.');
+  await attachMedia(item,signal);const video=item.video;if(video.duration<=.05)throw Error('Video chưa có thời lượng hợp lệ.');
   item.sourceWidth=video.videoWidth;item.sourceHeight=video.videoHeight;item.fileSize=file.size;item.duration=item.trimEnd=video.duration;item.sceneDuration=Math.min(600,video.duration);
   const maxEdge=MOBILE?960:1280,scale=Math.min(1,maxEdge/Math.max(video.videoWidth,video.videoHeight));item.image.width=Math.round(video.videoWidth*scale);item.image.height=Math.round(video.videoHeight*scale);
   mediaStatus('Đang đọc khung hình đầu: '+file.name+' · '+Math.round(item.duration/60)+' phút…');
   await seekMedia(item,0,signal);
   const thumb=document.createElement('canvas');thumb.width=160;thumb.height=Math.max(1,Math.round(160*item.image.height/item.image.width));thumb.getContext('2d').drawImage(item.image,0,0,thumb.width,thumb.height);item.poster=thumb.toDataURL('image/jpeg',.7);
-  video.addEventListener('seeked',()=>{captureMedia(item);if(item.attached&&!mediaPreparing&&!loading&&(!run||run.paused))redraw()});
-  video.addEventListener('error',()=>{if(item.attached&&imgs.includes(item))mediaFailure(item,'Không đọc tiếp được clip')});
   // Retain only the poster and blob URL. Do not buffer every long movie at import.
   releaseMediaDecoder(item);return item;
  }catch(error){disposeMedia(item);throw error}
@@ -105,7 +110,7 @@ function activeMedia(time){if(!imgs.length)return[];const frame=Math.floor(time*
  if(imgs.length>1&&index>0&&time-switches[index]/FPS<transitionSeconds(index)&&transitionAt(index)!=='cut'){const previous=index-1;entries.push({item:imgs[previous%imgs.length],scene:previous,age:Math.max(0,(switches[index]-switches[previous])/FPS-.035),playing:false})}return entries;
 }
 function mediaFailure(item,message){if(item.failed)return;item.failed=true;item.video.pause();if(run?.mode==='record')pauseExport('video');else if(run)stop(false);mediaStatus(message+' · '+item.name+'. Đã dừng để tránh xuất clip bị đứng. Bấm tiếp tục để thử lại, hoặc đổi clip MP4 H.264.');}
-function playMedia(item){if(item.playPending||item.failed||!item.video.paused)return;item.playPending=true;item.video.play().catch(error=>{if(error.name!=='AbortError'&&run&&!run.paused)mediaFailure(item,'Trình duyệt chưa phát được video')}).finally(()=>item.playPending=false)}
+function playMedia(item){const video=item.video;if(item.playPending||item.failed||!video.paused)return;item.playPending=video;video.play().catch(error=>{if(item.video===video&&error.name!=='AbortError'&&run&&!run.paused)mediaFailure(item,'Trình duyệt chưa phát được video')}).finally(()=>{if(item.playPending===video)item.playPending=false})}
 function requestMediaFrame(entry){
  const item=entry.item;if(item.framePending||item.failed)return;
  const operation=(async()=>{

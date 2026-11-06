@@ -84,11 +84,11 @@ test('speed curve uses integrated time when seeking, holds trim and keeps music 
 });
 test('two real 7–9 minute movies import without retaining both decoders and seek near their ends',async({page},testInfo)=>{
  const {spawnSync}=require('node:child_process');
- const source=testInfo.outputPath('seed.mp4');fs.writeFileSync(source,clip.buffer);
+ 
  const files=[];
  for(const seconds of [420,540]){
   const file=testInfo.outputPath('long-'+seconds+'.mp4');
-  const result=spawnSync('ffmpeg',['-hide_banner','-loglevel','error','-stream_loop','-1','-i',source,'-t',String(seconds),'-c:v','copy','-an','-movflags','+faststart',file],{timeout:30000});
+  const result=spawnSync('ffmpeg',['-hide_banner','-loglevel','error','-f','lavfi','-i','testsrc2=size=160x90:rate=30','-t',String(seconds),'-c:v','libx264','-preset','ultrafast','-crf','32','-g','60','-pix_fmt','yuv420p','-an','-movflags','+faststart',file],{timeout:30000});
   if(result.error)throw result.error;expect(result.status,String(result.stderr)).toBe(0);files.push(file);
  }
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
