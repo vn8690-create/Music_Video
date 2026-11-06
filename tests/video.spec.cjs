@@ -111,7 +111,7 @@ test('metadata import can be cancelled and does not require loadeddata events',a
  });await page.goto('/');
  await page.locator('#imageFiles').setInputFiles(clip);await page.waitForFunction(()=>imgs.length===1&&!loading);
  expect(await page.evaluate(()=>imgs[0].duration)).toBeGreaterThan(1);
- await page.evaluate(()=>{HTMLMediaElement.prototype.load=function(){}});
+ await page.evaluate(()=>{Object.defineProperty(HTMLMediaElement.prototype,'src',{configurable:true,get(){return ''},set(value){}});HTMLMediaElement.prototype.load=function(){}});
  await page.locator('#imageFiles').setInputFiles({...clip,name:'cancel-long.mp4'});
  await expect(page.locator('#cancelMedia')).toBeVisible();await expect(page.locator('#cancelMedia')).toBeEnabled();
  await page.locator('#cancelMedia').click();await page.waitForFunction(()=>!loading);
