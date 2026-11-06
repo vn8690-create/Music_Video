@@ -49,7 +49,7 @@ async function openVideo(file,signal){
  }catch(error){disposeMedia(item);throw error}
 }
 async function addMedia(files){
- if(run||loading||starting||aiBusy())return;files=[...files];if(!files.length)return;loading=true;mediaImportController=new AbortController();const signal=mediaImportController.signal;$('#cancelMedia').hidden=false;ready();let added=0,errors=[];
+ if(run||loading||starting||aiBusy())return;files=[...files];if(!files.length)return;pauseBackgroundMedia();for(const item of imgs)if(item.kind==='video')releaseMediaDecoder(item);loading=true;mediaImportController=new AbortController();const signal=mediaImportController.signal;$('#cancelMedia').hidden=false;ready();let added=0,errors=[];
  try{for(const file of files){if(signal.aborted)break;mediaStatus('Đang mở '+file.name+' · '+(file.size/1048576).toFixed(1)+' MB…');try{
   let item;if(isVideoFile(file)){if(imgs.filter(m=>m.kind==='video').length>=(MOBILE?6:12))throw Error('Đã đạt số clip cho một lượt. Hãy chia MV hoặc bớt clip.');item=await openVideo(file,signal)}
   else{const image=await openImage(file);item={id:++mediaSequence,kind:'image',image,url:URL.createObjectURL(file),name:file.name}}
