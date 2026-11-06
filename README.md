@@ -153,3 +153,11 @@ Kiểm tra: 8 unit tests và 16 browser tests chạy đạt trên Chromium với
 Chọn clip → Đường cong tốc độ → Tăng nhanh → Slow, Slow → Tăng nhanh, Nhanh → Slow → Nhanh hoặc Tự chỉnh. Năm mốc 0/25/50/75/100% của thời lượng cảnh chỉnh được từ 0,25× đến 4×; biểu đồ nối mượt giữa các mốc. Chọn Tốc độ cố định để trở lại chế độ cũ.
 Thời lượng cảnh tự đổi theo tốc độ trung bình để giữ nguyên lượng hình gốc đã đi qua. Có thể nhập lại thời lượng để lặp hoặc giữ hình cuối. Thời gian nguồn được tính từ tích phân đường cong, nên tua/tạm dừng không tích lũy sai số. Nhạc và sub không đổi tốc độ.
 Đã chạy đạt 11 unit tests. Có browser regression cho preset, sửa mốc, tua, hold, pause/resume và xuất; kiểm tra trình duyệt được giao cho GitHub Actions do sandbox cục bộ chặn khởi chạy Chromium.
+
+## V5.6.1 — Giảm tải khi dùng video dài
+- Chỉ đọc metadata và khung hình đầu khi nhập; giữ poster và URL của file gốc. Không nạp sẵn tất cả phim.
+- Chỉ giữ bộ giải mã của cảnh hiện tại; chuyển cảnh dùng canvas cuối của cảnh trước. Không await video.play() vô thời hạn khi khởi động.
+- Nhận biết khung hình sẵn sàng qua canplay/seeked hoặc trạng thái hiện tại, không phụ thuộc riêng loadeddata. Có timeout và nút hủy đọc file.
+- Tính tuổi cảnh liên tục, tránh sai lệch tốc độ khi tua đường cong.
+- Unit tests: 14 đạt. Browser regression bổ sung hai MP4 H.264 thực dài 420/540 giây, thử tua gần cuối, phát qua hai cảnh, giải phóng decoder và hủy nhập. Các fixture dài được tạo từ clip mẫu nhỏ nên kiểm tra thời lượng/lifecycle, không mô phỏng tải giải mã 4K.
+- Chưa xác nhận trên iPhone vật lý hoặc file gốc của người dùng. 4K/HEVC vẫn có thể vượt khả năng thiết bị; ưu tiên H.264 720p/1080p khi gặp lỗi codec/bộ nhớ.
