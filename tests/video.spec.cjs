@@ -82,3 +82,38 @@ test('speed curve uses integrated time when seeking, holds trim and keeps music 
  if(await page.evaluate(()=>canRecord())){await page.locator('#record').click();await page.waitForFunction(()=>!!document.querySelector('#out video'),null,{timeout:25000})}
  expect(errors).toEqual([]);
 });
+test('two real 7–9 minute movies import without retaining both decoders and seek near their ends',async({page},testInfo)=>{
+ const {spawnSync}=require('node:child_process');
+ 
+ const files=[];
+ for(const seconds of [420,540]){
+  const file=testInfo.outputPath('long-'+seconds+'.mp4');
+  const result=spawnSync('ffmpeg',['-hide_banner','-loglevel','error','-f','lavfi','-i','testsrc2=size=160x90:rate=30','-t',String(seconds),'-c:v','libx264','-preset','ultrafast','-crf','32','-g','60','-pix_fmt','yuv420p','-an','-movflags','+faststart',file],{timeout:30000});
+  if(result.error)throw result.error;expect(result.status,String(result.stderr)).toBe(0);files.push(file);
+ }
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
+ await page.locator('#audioFile').setInputFiles(fixture('tone.wav'));await page.waitForFunction(()=>env&&!loading);
+ await page.locator('#imageFiles').setInputFiles(files);await page.waitForFunction(()=>imgs.length===2&&!loading,null,{timeout:30000});
+ expect(await page.evaluate(()=>imgs.map(i=>Math.round(i.duration)))).toEqual([420,540]);
+ expect(await page.evaluate(()=>imgs.filter(i=>i.attached).length)).toBeLessThanOrEqual(1);
+ await page.evaluate(()=>{for(const item of imgs){item.trimStart=item.trimEnd-3;item.sceneDuration=2}plan()});
+ for(const time of [.5,2.5,.5]){
+  const sample=await page.evaluate(async time=>{position=time;await prepareBackgroundMedia(time);drawFrame(time);const item=activeMedia(time)[0].item;return{actual:item.video.currentTime,expected:clipTime(item,activeMedia(time)[0].age),attached:imgs.filter(i=>i.attached).length}},time);
+  expect(sample.actual).toBeCloseTo(sample.expected,1);expect(sample.attached).toBe(1);
+ }
+ await page.evaluate(()=>position=0);await page.locator('#play').click();await page.waitForFunction(()=>run&&currentTime()>2.5);await page.locator('#stop').click();
+ expect(errors).toEqual([]);
+});
+test('metadata import can be cancelled and does not require loadeddata events',async({page})=>{
+ await page.addInitScript(()=>{
+  const original=HTMLMediaElement.prototype.addEventListener;
+  HTMLMediaElement.prototype.addEventListener=function(type,...args){if(type==='loadeddata')return;return original.call(this,type,...args)};
+ });await page.goto('/');
+ await page.locator('#imageFiles').setInputFiles(clip);await page.waitForFunction(()=>imgs.length===1&&!loading);
+ expect(await page.evaluate(()=>imgs[0].duration)).toBeGreaterThan(1);
+ await page.evaluate(()=>{Object.defineProperty(HTMLMediaElement.prototype,'src',{configurable:true,get(){return ''},set(value){}});HTMLMediaElement.prototype.load=function(){}});
+ await page.locator('#imageFiles').setInputFiles({...clip,name:'cancel-long.mp4'});
+ await expect(page.locator('#cancelMedia')).toBeVisible();await expect(page.locator('#cancelMedia')).toBeEnabled();
+ await page.locator('#cancelMedia').click();await page.waitForFunction(()=>!loading);
+ await expect(page.locator('#mediaStatus')).toContainText('Đã hủy');expect(await page.evaluate(()=>imgs.length)).toBe(1);
+});
