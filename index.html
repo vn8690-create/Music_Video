@@ -335,7 +335,7 @@ window.addEventListener('pageshow',()=>{if(!document.hidden&&run?.autoPaused)res
 window.addEventListener('beforeunload',e=>{if(run?.mode==='record'){e.preventDefault();e.returnValue=''}});
 if(MOBILE)$('#quality').value='480';setPresetEffects();resize();capabilityNote();ready();initAlbumStudio();initPlaylist();initTransitions();initAISubtitles();initMedia();$('#jumpPreview').onclick=()=>document.querySelector('.stage').scrollIntoView({behavior:'smooth',block:'start'});
 if('serviceWorker'in navigator&&window.isSecureContext)navigator.serviceWorker.register('./sw.js').catch(()=>{});
-</script></body></html>
+</script><script src="pc-bridge-ui.js?v=1"></script></body></html>
 
 
 
