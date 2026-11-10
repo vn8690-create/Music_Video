@@ -15,7 +15,7 @@ function releaseMediaDecoder(item){
 function createMediaDecoder(item){
  const video=document.createElement('video');video.muted=true;video.defaultMuted=true;video.volume=0;video.playsInline=true;video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.preload='metadata';video.setAttribute('aria-hidden','true');$('#videoDecoders').append(video);item.video=video;
  video.addEventListener('seeked',()=>{if(item.video!==video||!item.attached)return;captureMedia(item);if(!mediaPreparing&&!loading&&(!run||run.paused))redraw()});
- video.addEventListener('error',()=>{if(item.video===video&&item.attached&&imgs.includes(item))mediaFailure(item,'Không đọc tiếp được clip')});
+ video.addEventListener('error',()=>{if(item.video===video&&item.attached&&imgs.includes(item)&&activeMedia(currentTime())[0]?.item===item)mediaFailure(item,'Không đọc tiếp được clip')});
  return video;
 }
 async function attachMedia(item,signal){

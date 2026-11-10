@@ -26,3 +26,14 @@ test('standby frame is decoded before the seam without seek/play churn near EOF'
  if(await page.evaluate(()=>canRecord())){await page.locator('#record').click();await page.waitForFunction(()=>!!document.querySelector('#out video'),null,{timeout:20000});await expect(page.locator('#out a')).toBeVisible()}
  expect(errors).toEqual([]);
 });
+test('a failed standby load does not stop the foreground video',async({page})=>{
+ await page.goto('/');await page.locator('#audioFile').setInputFiles(song(4.7));await page.waitForFunction(()=>env&&!loading);
+ await page.locator('#imageFiles').setInputFiles([{name:'A.mp4',mimeType:'video/mp4',buffer:clip},{name:'B.mp4',mimeType:'video/mp4',buffer:clip}]);await page.waitForFunction(()=>imgs.length===2&&!loading);
+ await page.evaluate(()=>{
+  const create=createMediaDecoder;createMediaDecoder=function(item){const v=create(item);if(item.name==='B.mp4')queueMicrotask(()=>v.dispatchEvent(new Event('error')));return v};
+ });await page.locator('#play').click();
+ await page.waitForFunction(()=>imgs[1].warmFailedScene===1);
+ expect(await page.evaluate(()=>!!run&&!run.paused&&!imgs[0].failed)).toBe(true);
+ await page.waitForFunction(()=>run&&currentTime()>1.6);
+ await page.locator('#stop').click();
+});
