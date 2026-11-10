@@ -2,7 +2,10 @@
 let mediaSequence=0,mediaPreparing=false,mediaImportController=null;
 function isVideoFile(file){return(file.type||'').startsWith('video/')||/\.(mp4|mov|m4v|webm)$/i.test(file.name)}
 function mediaDuration(item){return item.kind==='video'?item.sceneDuration:number('#gap',8,2,120)}
-function clipTime(item,age){const span=item.trimEnd-item.trimStart,safeEnd=Math.max(item.trimStart,item.trimEnd-.035),elapsed=SpeedCurve.elapsed(item,age);return Math.min(safeEnd,item.trimStart+(item.loop?elapsed%span:Math.min(span,elapsed)))}
+function mediaPhase(item,age){return PlaybackClock.phase(item.trimStart,item.trimEnd,SpeedCurve.elapsed(item,age),item.loop)}
+function clipTime(item,age){return mediaPhase(item,age).target}
+function markMediaPosition(item,entry){item.warmFailedScene=null;item.lastScene=entry.scene;item.syncCycle=mediaPhase(item,entry.age).cycle;item.lastHardSeek=performance.now()}
+function invalidateMediaPlayback(){for(const item of imgs)if(item.kind==='video')item.lastScene=-1}
 function transitionSeconds(index){const current=((switches[index+1]??env?.n??FPS*8)-switches[index])/FPS,previous=index?(switches[index]-switches[index-1])/FPS:current;return Math.min(number('#transitionDuration',.7,.2,2.5),Math.max(.02,Math.min(current,previous)*.45))}
 function mediaStatus(message){$('#mediaStatus').textContent=message;say(message)}
 function captureMedia(item){if(!item.attached||item.video.readyState<2||item.video.seeking)return;item.image.getContext('2d').drawImage(item.video,0,0,item.image.width,item.image.height);item.cachedTime=item.video.currentTime}
@@ -111,39 +114,56 @@ function activeMedia(time){if(!imgs.length)return[];const frame=Math.floor(time*
 }
 function mediaFailure(item,message){if(item.failed)return;item.failed=true;item.video.pause();if(run?.mode==='record')pauseExport('video');else if(run)stop(false);mediaStatus(message+' · '+item.name+'. Đã dừng để tránh xuất clip bị đứng. Bấm tiếp tục để thử lại, hoặc đổi clip MP4 H.264.');}
 function playMedia(item){const video=item.video;if(item.playPending||item.failed||!video.paused)return;item.playPending=video;video.play().catch(error=>{if(item.video===video&&error.name!=='AbortError'&&run&&!run.paused)mediaFailure(item,'Trình duyệt chưa phát được video')}).finally(()=>{if(item.playPending===video)item.playPending=false})}
-function requestMediaFrame(entry){
+function requestMediaFrame(entry,background=false){
  const item=entry.item;if(item.framePending||item.failed)return;
- const operation=(async()=>{
-  await seekMedia(item,clipTime(item,entry.age));item.lastScene=entry.scene;
- })();item.framePending=operation;
- operation.catch(error=>{if(error.name!=='AbortError'&&imgs.includes(item))mediaFailure(item,error.message)}).finally(()=>{
+ const operation=(async()=>{await seekMedia(item,clipTime(item,entry.age));markMediaPosition(item,entry)})();item.framePending=operation;
+ operation.catch(error=>{
+  if(error.name==='AbortError'||!imgs.includes(item))return;
+  if(background){item.warmFailedScene=entry.scene;releaseMediaDecoder(item)}
+  else mediaFailure(item,error.message);
+ }).finally(()=>{
   if(item.framePending===operation)item.framePending=null;
   if(imgs.includes(item)&&!run&&!loading)redraw();
  });
 }
+function warmMediaEntry(time){
+ if(!run||run.paused||run.stopping||!imgs.length)return null;
+ const frame=Math.floor(time*FPS),scene=search(switches,frame),next=scene+1,until=(switches[next]??Infinity)/FPS-time;
+ if(until>1.2||until<=0||time-switches[scene]/FPS<transitionSeconds(scene)+.05)return null;
+ const current=imgs[scene%imgs.length],item=imgs[next%imgs.length];
+ return PlaybackClock.canWarm(current,item,MOBILE)&&item.warmFailedScene!==next?{item,scene:next,age:0,playing:false}:null;
+}
 function syncBackgroundMedia(time){
  if(mediaPreparing||loading)return;
- const entry=activeMedia(time)[0],main=entry?.item;
- // Crossfades use the cached outgoing canvas. One active native decoder avoids
- // keeping two full-resolution long movies buffered on memory-limited phones.
- for(const item of imgs)if(item.kind==='video'&&item!==main)releaseMediaDecoder(item);
- if(!entry||main.kind!=='video'||main.failed)return;
- const item=main,v=item.video,target=clipTime(item,entry.age),hold=!item.loop&&SpeedCurve.elapsed(item,entry.age)>=item.trimEnd-item.trimStart;
- if(!item.attached||v.readyState<2){
-  if(entry.playing||Math.abs((item.cachedTime??-1)-target)>.04)requestMediaFrame(entry);
-  return;
+ const entry=activeMedia(time)[0],main=entry?.item,warm=warmMediaEntry(time);
+ // At most one short-lived standby decoder; large/4K pairs keep the one-decoder path.
+ for(const item of imgs)if(item.kind==='video'&&item!==main&&item!==warm?.item)releaseMediaDecoder(item);
+ if(main?.kind==='video'&&!main.failed){
+  const item=main,v=item.video,p=mediaPhase(item,entry.age);
+  if(!item.attached||v.readyState<2){
+   if(entry.playing||Math.abs((item.cachedTime??-1)-p.target)>.04)requestMediaFrame(entry);
+  }else{
+   const jump=item.lastScene!==entry.scene||item.syncCycle!==p.cycle;
+   const action=PlaybackClock.correction({phase:p,time:v.currentTime,rate:SpeedCurve.at(item,entry.age),playing:entry.playing,ended:v.ended,jump,lastSeek:item.lastHardSeek,now:performance.now()});
+   v.muted=true;v.volume=0;
+   if(!v.seeking){
+    item.lastScene=entry.scene;item.syncCycle=p.cycle;
+    if(action.seek!==null){v.currentTime=action.seek;item.lastHardSeek=performance.now()}
+   }
+   if(Math.abs(v.playbackRate-action.rate)>.005)v.playbackRate=action.rate;
+   if(entry.playing&&!action.hold&&!v.seeking)playMedia(item);else v.pause();
+   captureMedia(item);
+  }
  }
- v.muted=true;v.volume=0;const rate=SpeedCurve.at(item,entry.age);if(Math.abs(v.playbackRate-rate)>.005)v.playbackRate=rate;
- if(!v.seeking&&(item.lastScene!==entry.scene||Math.abs(v.currentTime-target)>(entry.playing?.35*Math.max(1,rate):.035))){item.lastScene=entry.scene;v.currentTime=target}
- if(entry.playing&&!hold)playMedia(item);else v.pause();captureMedia(item);
+ if(warm&&(!warm.item.attached||warm.item.lastScene!==warm.scene))requestMediaFrame(warm,true);
 }
-function pauseBackgroundMedia(){for(const item of imgs)if(item.kind==='video')item.video.pause()}
+function pauseBackgroundMedia(){const main=activeMedia(currentTime())[0]?.item;for(const item of imgs)if(item.kind==='video'){item.video.pause();if(item!==main)releaseMediaDecoder(item)}}
 async function prepareBackgroundMedia(time){
  const entries=activeMedia(time),entry=entries[0];if(!entry||entry.item.kind!=='video')return;
  mediaPreparing=true;
  try{
   pauseBackgroundMedia();for(const item of imgs)if(item.kind==='video'&&item!==entry.item)releaseMediaDecoder(item);
-  const item=entry.item;item.failed=false;await seekMedia(item,clipTime(item,entry.age));item.video.playbackRate=SpeedCurve.at(item,entry.age);item.lastScene=entry.scene;
+  const item=entry.item;item.failed=false;await seekMedia(item,clipTime(item,entry.age));item.video.playbackRate=SpeedCurve.at(item,entry.age);markMediaPosition(item,entry);
   // Do not await video.play(): it may stay pending indefinitely while buffering.
   // The regular playback tick starts the muted video once the first frame is ready.
  }finally{mediaPreparing=false}

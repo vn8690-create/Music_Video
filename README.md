@@ -161,3 +161,10 @@ Thời lượng cảnh tự đổi theo tốc độ trung bình để giữ nguy
 - Tính tuổi cảnh liên tục, tránh sai lệch tốc độ khi tua đường cong.
 - Unit tests: 14 đạt. Browser regression bổ sung hai MP4 H.264 thực dài 420/540 giây, thử tua gần cuối, phát qua hai cảnh, giải phóng decoder và hủy nhập. Các fixture dài được tạo từ clip mẫu nhỏ nên kiểm tra thời lượng/lifecycle, không mô phỏng tải giải mã 4K.
 - Chưa xác nhận trên iPhone vật lý hoặc file gốc của người dùng. 4K/HEVC vẫn có thể vượt khả năng thiết bị; ưu tiên H.264 720p/1080p khi gặp lỗi codec/bộ nhớ.
+
+## V5.6.2 — Giảm giật sát điểm chuyển video
+- Chặn việc gọi play() phát lại từ đầu khi video đã chạm EOF nhưng đồng hồ cảnh chưa chuyển. Chỉ giữ khung cuối trong phần đuôi khung hình, rồi chuyển/lặp một lần.
+- Độ lệch nhỏ được bù tốc độ tối đa 6%, thay vì seek liên tục. Seek vẫn dùng cho tua chủ động, đổi cảnh/vòng lặp và độ lệch lớn, có khoảng nghỉ giữa các lần sửa.
+- Chuẩn bị metadata/khung đầu của clip kế tiếp trước tối đa 1,2 giây, chỉ khi tổng pixel nguồn đủ nhẹ: 2,1MP trên điện thoại hoặc 8,4MP trên desktop. Tối đa hai decoder trong khoảng chuyển, giải phóng standby khi tạm dừng. Các cặp nặng/4K dùng đường một decoder để hạn chế bộ nhớ; có thể vẫn có trễ mở clip tùy thiết bị.
+- Nhạc và karaoke dùng đồng hồ âm thanh như trước. Không thêm nội suy khung hình AI.
+- Kiểm tra cục bộ: 18 unit tests và các ca browser về chuẩn bị cảnh tiếp, số lần seeking/play ở đuôi clip, xuất video, tốc độ, nhập/hủy và video dài. Browser CLI cục bộ cần chạy riêng từng ca do giới hạn tái sử dụng context ở Chromium single-process; CI chạy bộ Chromium/WebKit chuẩn. Chưa thử file gốc và thiết bị vật lý của người dùng.
