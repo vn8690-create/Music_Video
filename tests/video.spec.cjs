@@ -2,6 +2,7 @@ const {test,expect}=require('@playwright/test');
 const fs=require('node:fs'),path=require('node:path');
 const fixture=name=>path.join(__dirname,'fixtures',name);
 const clip={name:'clip.mp4',mimeType:'video/mp4',buffer:Buffer.from(fs.readFileSync(fixture('clip.mp4.base64'),'utf8'),'base64')};
+const {song}=require('./audio-fixture.cjs');
 test.use({serviceWorkers:'block'});
 test('mixed clips trim, loop, hold, reorder and export with muted native audio',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
@@ -92,7 +93,7 @@ test('two real 7–9 minute movies import without retaining both decoders and se
   if(result.error)throw result.error;expect(result.status,String(result.stderr)).toBe(0);files.push(file);
  }
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/');
- await page.locator('#audioFile').setInputFiles(fixture('tone.wav'));await page.waitForFunction(()=>env&&!loading);
+ await page.locator('#audioFile').setInputFiles(song(12));await page.waitForFunction(()=>env&&!loading);
  await page.locator('#imageFiles').setInputFiles(files);await page.waitForFunction(()=>imgs.length===2&&!loading,null,{timeout:30000});
  expect(await page.evaluate(()=>imgs.map(i=>Math.round(i.duration)))).toEqual([420,540]);
  expect(await page.evaluate(()=>imgs.filter(i=>i.attached).length)).toBeLessThanOrEqual(1);
