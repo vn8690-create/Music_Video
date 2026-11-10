@@ -168,3 +168,13 @@ Thời lượng cảnh tự đổi theo tốc độ trung bình để giữ nguy
 - Chuẩn bị metadata/khung đầu của clip kế tiếp trước tối đa 1,2 giây, chỉ khi tổng pixel nguồn đủ nhẹ: 2,1MP trên điện thoại hoặc 8,4MP trên desktop. Tối đa hai decoder trong khoảng chuyển, giải phóng standby khi tạm dừng. Các cặp nặng/4K dùng đường một decoder để hạn chế bộ nhớ; có thể vẫn có trễ mở clip tùy thiết bị.
 - Nhạc và karaoke dùng đồng hồ âm thanh như trước. Không thêm nội suy khung hình AI.
 - Kiểm tra cục bộ: 18 unit tests và các ca browser về chuẩn bị cảnh tiếp, số lần seeking/play ở đuôi clip, xuất video, tốc độ, nhập/hủy và video dài. Browser CLI cục bộ cần chạy riêng từng ca do giới hạn tái sử dụng context ở Chromium single-process; CI chạy bộ Chromium/WebKit chuẩn. Chưa thử file gốc và thiết bị vật lý của người dùng.
+
+## 5.7 — NVS Aurora / Pexels
+
+The Aurora workspace adds a responsive cyan/violet theme and a Pexels stock-video tab. Enter your own existing Pexels API key in the password field, search a topic (English keywords work well), choose orientation/resolution, preview/select clips or auto-select up to the device limit, then **Thêm vào MV**. Each imported clip uses the selected scene duration and can be trimmed, reordered, looped or speed-ramped in **Tư liệu**. Auto-selection follows search ranking; it does not analyze song meaning.
+
+The key lives only in page memory, including the short-lived search cache; it is never written to local/session storage, URLs, source code or the service worker. Reload or **Xóa key khỏi phiên** clears it. Searches send the key only to `https://api.pexels.com/v1/videos/search` via Authorization. The public static app uses the user's key directly; it is not a shared server credential. Do not hard-code a production key when deploying for other users.
+
+Downloads use validated HTTPS CDN URLs, without Authorization, and become local blob-backed video assets before entering the renderer. Imports are sequential and cancellable, preserve prior assets, and enforce 6 mobile / 12 desktop clips, 50/120 MiB per download and 120/360 MiB per batch. Resolution is the nearest available short-edge size. Actual API access depends on the user's valid key, quota and Pexels availability/CORS. Pexels results retain creator/source links; **Tải danh sách nguồn video** exports credits for the video's description. Review the linked Pexels license for the intended use.
+
+Tests mock API responses (no real key required) and import/decode an actual MP4 fixture. They verify Authorization routing, caching, duplicate filtering, cancellation, invalid-key recovery, session-only key handling and responsive layout. Existing playback/export/karaoke regression tests remain enabled.
