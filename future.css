@@ -5,3 +5,5 @@
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 
 .scene-planner{margin-top:16px;padding:13px;border:1px solid #66538a;border-radius:12px;background:linear-gradient(130deg,#30224466,#14273b88)}.scene-planner summary{font-size:13px;color:#d6c6ff}.scene-planner textarea{min-height:120px}.scene-query{display:grid;grid-template-columns:20px minmax(0,1fr);align-items:center;gap:8px;margin:8px 0}.scene-query input[type=text]{min-width:0;font-size:13px}.scene-planner .primary{width:100%;margin-top:10px}.cancel-stock{position:fixed;bottom:max(14px,env(safe-area-inset-bottom));left:14px;z-index:30;background:#302240;box-shadow:0 6px 24px #0008;max-width:55vw}@media(max-width:950px){.scene-query input[type=text]{font-size:16px}}
+
+.motion-panel{margin:16px 0 22px;padding:18px;border:1px solid #7663c866;border-radius:18px;background:linear-gradient(140deg,#172538bb,#211733bb)}.motion-panel h3{margin:6px 0 14px;font-size:18px}.motion-panel .eyebrow{color:#b4a5ff}.motion-panel .field{margin-bottom:12px}.motion-panel input,.motion-panel select{min-width:0;max-width:100%}
