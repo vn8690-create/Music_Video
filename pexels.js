@@ -3,21 +3,34 @@ const pexelsState={results:[],selected:new Set(),controller:null,busy:false,cach
 function pexelsMessage(text){$('#pexelsStatus').textContent=text}
 function syncPexelsControls(){const locked=!!run||loading||starting||aiBusy();for(const el of document.querySelectorAll('[data-pexels-control]'))el.disabled=locked||pexelsState.busy;$('#pexelsImport').disabled=locked||pexelsState.busy||!pexelsState.selected.size;$('#pexelsCredits').disabled=!imgs.some(i=>i.pexels)}
 function pexelsError(error){if(error.name==='AbortError')return 'Đã hủy thao tác. Các tư liệu đã thêm vẫn được giữ.';return error.message||'Không kết nối được. Kiểm tra mạng và thử lại.'}
-async function searchPexels(){
- if(pexelsState.busy||run||loading||starting||aiBusy())return;
- const key=$('#pexelsKey').value.trim(),query=$('#pexelsQuery').value.trim();if(!key||!query){pexelsMessage('Nhập API key và chủ đề để tìm video.');return}
- const orientation=$('#pexelsOrientation').value,height=Number($('#pexelsResolution').value),cacheId=JSON.stringify([key,query,orientation,height]);
- pexelsState.busy=true;const controller=pexelsState.controller=new AbortController();$('#cancelPexels').hidden=false;syncPexelsControls();pexelsMessage('Đang tìm video trên Pexels…');const timeout=setTimeout(()=>controller.abort(),25000);
- try{
-  let results=pexelsState.cache.get(cacheId);
-  if(!results){const params=new URLSearchParams({query,orientation,per_page:'24',locale:'en-US'});const response=await fetch('https://api.pexels.com/v1/videos/search?'+params,{headers:{Authorization:key},signal:controller.signal,credentials:'omit',cache:'no-store',redirect:'error'});
-   if(!response.ok)throw Error(response.status===401?'API key chưa hợp lệ. Kiểm tra lại key.':response.status===429?'Đã hết lượt API tạm thời. Chờ rồi thử lại.':response.status===403?'Pexels từ chối yêu cầu. Kiểm tra quyền của key.':'Pexels trả lỗi '+response.status+'. Hãy thử lại sau.');
-   const data=await response.json();if(!Array.isArray(data.videos))throw Error('Dữ liệu Pexels không hợp lệ.');results=data.videos.map(v=>PexelsCore.normalize(v,height)).filter(Boolean);if(pexelsState.cache.size>=8)pexelsState.cache.delete(pexelsState.cache.keys().next().value);pexelsState.cache.set(cacheId,results);
-   const remaining=response.headers.get('X-Ratelimit-Remaining');$('#pexelsQuota').textContent=remaining===null?'':'Còn '+remaining+' lượt API trong kỳ hiện tại.';
-  }
-  pexelsState.results=results;pexelsState.selected.clear();renderPexels();pexelsMessage(results.length?'Tìm thấy '+results.length+' clip. Xem trước hoặc tự chọn cảnh rồi thêm vào MV.':'Chưa có clip phù hợp. Thử từ khóa khác, ví dụ “neon city” hoặc “ocean”.');
- }catch(error){pexelsMessage(pexelsError(error))}finally{clearTimeout(timeout);pexelsState.busy=false;pexelsState.controller=null;$('#cancelPexels').hidden=true;syncPexelsControls()}
+async function searchPexels(){return searchPexelsQueries([$('#pexelsQuery').value.trim()])}
+async function fetchPexelsResults(query,key,orientation,height,signal){
+ const cacheId=JSON.stringify([key,query,orientation,height]);let results=pexelsState.cache.get(cacheId);if(results)return results;
+ const params=new URLSearchParams({query,orientation,per_page:'24',locale:'en-US'});const response=await fetch('https://api.pexels.com/v1/videos/search?'+params,{headers:{Authorization:key},signal,credentials:'omit',cache:'no-store',redirect:'error'});
+ if(!response.ok)throw Error(response.status===401?'API key chưa hợp lệ. Kiểm tra lại key.':response.status===429?'Đã hết lượt API tạm thời. Chờ rồi thử lại.':response.status===403?'Pexels từ chối yêu cầu. Kiểm tra quyền của key.':'Pexels trả lỗi '+response.status+'. Hãy thử lại sau.');
+ const data=await response.json();if(!Array.isArray(data.videos))throw Error('Dữ liệu Pexels không hợp lệ.');results=data.videos.map(v=>PexelsCore.normalize(v,height)).filter(Boolean);if(pexelsState.cache.size>=8)pexelsState.cache.delete(pexelsState.cache.keys().next().value);pexelsState.cache.set(cacheId,results);
+ const remaining=response.headers.get('X-Ratelimit-Remaining');$('#pexelsQuota').textContent=remaining===null?'':'Còn '+remaining+' lượt API trong kỳ hiện tại.';return results;
 }
+async function searchPexelsQueries(queries){
+ if(pexelsState.busy||run||loading||starting||aiBusy())return;
+ queries=[...new Set(queries.map(q=>String(q).trim().slice(0,100)).filter(Boolean))].slice(0,3);
+ const key=$('#pexelsKey').value.trim();if(!key||!queries.length){pexelsMessage('Nhập API key và chủ đề để tìm video.');return}
+ const orientation=$('#pexelsOrientation').value,height=Number($('#pexelsResolution').value);
+ pexelsState.busy=true;const controller=pexelsState.controller=new AbortController();$('#cancelPexels').hidden=false;syncPexelsControls();const groups=[];let issue='';
+ try{
+  for(const [index,query]of queries.entries()){
+   if(controller.signal.aborted)break;pexelsMessage('Đang tìm '+(index+1)+'/'+queries.length+': '+query+'…');const timeout=setTimeout(()=>controller.abort(),25000);
+   try{groups.push(await fetchPexelsResults(query,key,orientation,height,controller.signal))}catch(error){issue=pexelsError(error);break}finally{clearTimeout(timeout)}
+  }
+  if(groups.length){
+   // Interleave themes so auto-selection isn't dominated by the first search.
+   const merged=[],seen=new Set();for(let i=0;i<24;i++)for(const group of groups){const video=group[i];if(video&&!seen.has(video.id)){seen.add(video.id);merged.push(video)}}
+   pexelsState.results=merged.slice(0,48);pexelsState.selected.clear();renderPexels();
+   pexelsMessage((merged.length?'Tìm thấy '+pexelsState.results.length+' clip từ '+groups.length+' chủ đề. Xem trước, tự chọn cảnh rồi thêm vào MV.':'Chưa có clip phù hợp. Sửa từ khóa hoặc chọn phong cách khác.')+(issue?' '+issue:''));
+  }else pexelsMessage(issue||'Đã hủy tìm kiếm.');
+ }finally{pexelsState.busy=false;pexelsState.controller=null;$('#cancelPexels').hidden=true;syncPexelsControls()}
+}
+
 function renderPexels(){
  const grid=$('#pexelsResults');grid.replaceChildren();
  for(const video of pexelsState.results){const card=document.createElement('article');card.className='stock-card';card.classList.toggle('is-selected',pexelsState.selected.has(video.id));const label=document.createElement('label');const check=document.createElement('input');check.type='checkbox';check.checked=pexelsState.selected.has(video.id);check.dataset.pexelsControl='';check.ariaLabel='Chọn clip '+video.id;check.onchange=()=>{if(check.checked)pexelsState.selected.add(video.id);else pexelsState.selected.delete(video.id);card.classList.toggle('is-selected',check.checked);syncPexelsControls()};const im=document.createElement('img');im.loading='lazy';if(video.poster)im.src=video.poster;im.alt='Video của '+video.author;const tag=document.createElement('span');tag.textContent=Math.round(video.duration)+'s · '+video.width+'×'+video.height;label.append(im,check,tag);card.append(label);
