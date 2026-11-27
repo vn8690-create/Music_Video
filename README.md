@@ -190,3 +190,13 @@ New validation covers multilingual/boundary matching, repeated choruses, honest 
 
 ## 5.9 — Motion Lite
 Four optional canvas title styles (Neon Pulse, Cinema Gold, Minimal Clean, Retro Wave), editable title/subtitle, position, intensity, duration and intro/outro/continuous modes. Intro/outro overlay existing audio; no timeline insertion or karaoke offset. Subtitles draw above Motion. Light mode defaults on (12 rather than 24 particles, no blur or external runtime). This is a browser-native adaptation, not the Node/HyperFrames engine. Existing transitions remain available. Actual phone export performance depends on source videos and other enabled layers.
+
+
+## V6.0 — ổn định xuất video trên Safari iPhone
+
+- Khi xuất, giới hạn nhịp dựng canvas ở mục tiêu 30 FPS để tránh vẽ lại 60 lần/giây trong khi luồng capture chỉ cần 30 FPS. Chế độ xem thử vẫn giữ nhịp hiển thị tự nhiên.
+- Nếu trình duyệt hỗ trợ CanvasCaptureMediaStreamTrack.requestFrame(), app dùng captureStream(0) và yêu cầu lấy frame ngay sau khi vẽ. Nếu không, tự quay về captureStream(30).
+- Ưu tiên MIME MP4/H.264 khi trình duyệt báo hỗ trợ, giữ WebM làm fallback. Bitrate video theo kích thước canvas và AAC audio được khai báo rõ.
+- Hiển thị chẩn đoán nhịp dựng ước tính sau khi xuất: số frame yêu cầu, FPS dựng ước tính và số khoảng khung hình trễ. Đây là số đo vòng render, không phải chứng nhận CFR hoặc số frame đã mã hóa trong MP4.
+- Bổ sung unit tests cho MIME, bitrate, manual capture/fallback và frame pacing.
+- Giới hạn: MediaRecorder vẫn là bộ ghi thời gian thực của trình duyệt. Nếu Safari bị hệ điều hành treo/đóng tab hoặc CPU không đáp ứng 30 FPS, ứng dụng không thể tạo lại frame đã bỏ lỡ. Cần kiểm thử trên iPhone thật trước khi coi lỗi TikTok đã được giải quyết.
