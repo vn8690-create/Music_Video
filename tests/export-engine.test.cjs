@@ -32,7 +32,7 @@ test('falls back to browser-paced captureStream(fps) without requestFrame',()=>{
   const automatic={getVideoTracks:()=>[{id:'automatic'}],getTracks:()=>[]};
   const canvas={captureStream(fps){calls.push(fps);return calls.length===1?manual:automatic}};
   const capture=ExportEngine.createCanvasCapture(canvas,30);
-  assert.equal(capture.manual,false);assert.deepEqual(calls,[0,30]);
+  assert.equal(capture.manual,false);assert.deepEqual(calls,[0,'stop',30]);
 });
 test('paces export rendering at target cadence',()=>{
   assert.equal(ExportEngine.shouldRender(1000,null,30),true);
